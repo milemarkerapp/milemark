@@ -1,0 +1,48 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MileMark: Maintenance by the Mile</title><meta name="description" content="See which maintenance is overdue, due now and coming up for your car, based on its odometer.">
+<meta name="theme-color" content="#0f172a"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon-192.png"><link rel="stylesheet" href="styles.css"></head><body>
+<header class="top"><div class="brand">Mile<span>Mark</span></div><button id="unlockBtn" class="ghost sm">Unlock Pro</button></header>
+<main>
+<div id="banners"></div>
+<section class="card" id="vehCard"><div class="row between"><h2>My vehicles</h2><button id="addVeh" class="sm">+ Add</button></div><div id="vehList"></div></section>
+<section class="card hidden" id="formCard"><h2 id="formTitle">Set up your vehicle</h2><p class="muted">One step. MileMark estimates your mileage from here on.</p>
+<label>Make & model<select id="fModel"></select></label>
+<div class="grid2"><label>Year<input id="fYear" type="number" min="1900" max="2030" placeholder="2019"></label>
+<label>Current odometer<input id="fCur" type="number" min="0" inputmode="numeric" placeholder="48200"></label></div>
+<details><summary class="muted">Optional settings</summary>
+<label>Nickname<input id="fName" placeholder="Blue truck"></label>
+<label>Average miles per day<input id="fRate" type="number" step="1" placeholder="37 (about 13,500 a year)"></label>
+<label id="fEngWrap" class="hidden">Engine / drivetrain (optional)<select id="fEng"></select></label><label>Driving conditions<select id="fDuty"><option value="n">Normal</option><option value="s">Severe (towing, short trips, dust, extreme heat or cold, stop-and-go)</option></select></label></details>
+<div class="row"><button id="saveVeh">Start reminders</button><button id="cancelVeh" class="ghost">Cancel</button></div></section>
+<section id="dash" class="hidden">
+<div class="card"><div class="row between"><div><h2 id="vTitle"></h2><div class="muted" id="vSys"></div></div><button id="editVeh" class="ghost sm">Edit</button></div>
+<div class="est"><div><span class="muted">Estimated odometer</span><b id="estOdo"></b><span class="muted" id="estInfo"></span></div><button id="fixOdo" class="ghost sm">Correct it</button></div>
+<div class="row wrap"><button id="notifBtn" class="ghost sm">Turn on reminders</button><button id="icsBtn" class="ghost sm">Add to calendar (.ics)</button><select id="duty" class="sm inl"><option value="n">Normal duty</option><option value="s">Severe duty</option></select></div></div>
+<div class="stats"><div class="stat over"><b id="cOver">0</b>Overdue</div><div class="stat now"><b id="cNow">0</b>Due now</div><div class="stat next"><b id="cNext">0</b>Next up</div></div>
+<div class="card"><div class="row between"><h2>Services</h2><button id="addCustom" class="ghost sm">+ Custom service</button></div><div id="items"></div></div>
+<div class="card"><details><summary><b>Parts & specs for this vehicle</b></summary><div id="vParts"></div></details></div>
+<div class="card"><h2>Timeline</h2><p class="muted">From your starting mileage to 30,000 miles past today.</p><div id="timeline"></div></div>
+<div class="card"><div class="row between"><h2>Service log</h2></div><div id="log"></div></div>
+<div class="card row wrap"><button id="reportBtn">Vehicle History Report</button><button id="printBtn" class="ghost">Print</button><button id="csvBtn" class="ghost">Export CSV</button><button id="jsonBtn" class="ghost">Back up (free)</button><label class="filebtn ghost">Restore backup<input id="restore" type="file" accept=".json,application/json" hidden></label><a class="btn ghost" href="help.html">Help</a></div>
+</section>
+<p class="disclaimer">MileMark intervals are general guidance summarized from public maintenance information for typical 2015–2025 US models. Your engine, trim and year may differ. <b>Your owner's manual and your vehicle's maintenance reminder are the authority.</b></p>
+</main>
+<dialog id="doneDlg"><h3 id="doneTitle"></h3><p class="muted">Everything here is optional. Mileage and parts are pre-filled.</p>
+<div class="grid2"><label>Odometer<input id="doneMi" type="number" inputmode="numeric"></label><label>Date<input id="doneDate" type="date"></label></div>
+<label>Parts used<input id="doneParts" placeholder="brand / part number"></label>
+<div class="grid2"><label>Cost<input id="doneCost" type="number" step="0.01" inputmode="decimal" placeholder="$"></label><label>Done by<input id="doneWho" list="whoList" placeholder="DIY or shop name"></label></div>
+<datalist id="whoList"><option value="DIY"></option></datalist>
+<label>Notes<input id="doneNote"></label>
+<label>Receipt photo<input id="donePhoto" type="file" accept="image/*" capture="environment"></label>
+<div class="row"><button id="doneSave">Log it</button><button id="doneCancel" class="ghost">Cancel</button></div></dialog>
+<dialog id="ivDlg"><h3 id="ivTitle"></h3><p class="muted" id="ivFactory"></p>
+<label id="ivNameRow">Service name<input id="ivName" placeholder="e.g. Replace wiper blades"></label>
+<div class="grid2"><label>Every … miles<input id="ivMi" type="number" min="0" inputmode="numeric"></label><label>and/or every … months<input id="ivMo" type="number" min="0" inputmode="numeric"></label></div>
+<div id="ivMsg" class="muted"></div>
+<div class="row wrap"><button id="ivSave">Save</button><button id="ivCancel" class="ghost">Cancel</button><button id="ivReset" class="ghost">Use factory interval</button><button id="ivDelete" class="ghost">Delete</button></div></dialog>
+<div id="report" class="hidden"><div class="rbar"><button id="rClose" class="ghost sm">← Back</button><div class="row"><button id="rShare" class="ghost sm">Share</button><button id="rPrint" class="sm">Print / Save PDF</button></div></div><div id="rBody" class="rpage"></div></div>
+<dialog id="proDlg"><h3>MileMark Pro</h3><p>Free covers one vehicle and a preview of the Vehicle History Report. Pro adds unlimited vehicles, the full printable and shareable history report with receipt photos, and CSV export. Backup and restore are free. One payment, no subscription, ever. Your data never leaves your phone. <a href="help.html#license">How activation works</a></p>
+<p><a id="buyLink" class="btn" target="_blank" rel="noopener">Buy on Gumroad</a></p><label>License key<input id="licKey" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX"></label><div id="licMsg" class="muted"></div>
+<div class="row"><button id="licGo">Activate</button><button id="proClose" class="ghost">Close</button></div></dialog>
+<footer><a href="help.html">Help</a> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · Support and refunds through Gumroad · © MileMark</footer>
+<script src="features.js"></script><script src="app.js"></script></body></html>
