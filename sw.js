@@ -1,4 +1,4 @@
-const C = "milemark-v15", FILES = ["./", "index.html", "styles.css", "app.js", "schedules.json", "parts.json", "manifest.webmanifest", "icon.svg", "icon-192.png", "terms.html", "privacy.html", "help.html", "features.js"];
+const C = "milemark-v16", FILES = ["./", "index.html", "styles.css", "app.js", "schedules.json", "parts.json", "manifest.webmanifest", "icon.svg", "icon-192.png", "terms.html", "privacy.html", "help.html", "features.js"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(C).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener("activate", e => e.waitUntil(clients.claim()));
 self.addEventListener("fetch", e => { if (e.request.method !== "GET" || !e.request.url.startsWith(self.location.origin)) return;

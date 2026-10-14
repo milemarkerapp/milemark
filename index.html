@@ -1,6 +1,17 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MileMark: Maintenance by the Mile</title><meta name="description" content="See which maintenance is overdue, due now and coming up for your car, based on its odometer.">
-<meta name="theme-color" content="#0f172a"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon-192.png"><link rel="stylesheet" href="styles.css"></head><body>
+<title>MileMark: Maintenance by the Mile</title><meta name="description" content="Free car maintenance reminders from your owner's manual, page cited. 360 model-years, 10 brands. Works offline. No account, no subscription.">
+<meta name="theme-color" content="#0f172a"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg"><link rel="apple-touch-icon" href="icon-192.png"><link rel="stylesheet" href="styles.css"><link rel="canonical" href="https://milemarkerapp.github.io/milemark/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="MileMark: Car maintenance reminders from your owner's manual">
+<meta property="og:description" content="Free car maintenance reminders from your owner's manual, page cited. 360 model-years, 10 brands. Works offline. No account, no subscription.">
+<meta property="og:url" content="https://milemarkerapp.github.io/milemark/">
+<meta property="og:image" content="https://milemarkerapp.github.io/milemark/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MileMark: Car maintenance reminders from your owner's manual">
+<meta name="twitter:description" content="Free car maintenance reminders from your owner's manual, page cited. 360 model-years, 10 brands. Works offline.">
+<meta name="twitter:image" content="https://milemarkerapp.github.io/milemark/og.png">
+</head><body>
 <header class="top"><div class="brand">Mile<span>Mark</span></div><button id="unlockBtn" class="ghost sm">Unlock Pro</button></header>
 <main>
 <div id="banners"></div>
@@ -25,7 +36,7 @@
 <div class="card"><div class="row between"><h2>Service log</h2></div><div id="log"></div></div>
 <div class="card row wrap"><button id="reportBtn">Vehicle History Report</button><button id="printBtn" class="ghost">Print</button><button id="csvBtn" class="ghost">Export CSV</button><button id="jsonBtn" class="ghost">Back up (free)</button><label class="filebtn ghost">Restore backup<input id="restore" type="file" accept=".json,application/json" hidden></label><a class="btn ghost" href="help.html">Help</a></div>
 </section>
-<p class="disclaimer">MileMark intervals are general guidance summarized from public maintenance information for typical 2015–2025 US models. Your engine, trim and year may differ. <b>Your owner's manual and your vehicle's maintenance reminder are the authority.</b></p>
+<p class="disclaimer">Intervals come from the manufacturer's official owner's manual or maintenance guide for your model year, with the manual and page cited. Pick your engine for exact values. <b>Your owner's manual and your vehicle's maintenance reminder are the authority.</b></p>
 </main>
 <dialog id="doneDlg"><h3 id="doneTitle"></h3><p class="muted">Everything here is optional. Mileage and parts are pre-filled.</p>
 <div class="grid2"><label>Odometer<input id="doneMi" type="number" inputmode="numeric"></label><label>Date<input id="doneDate" type="date"></label></div>

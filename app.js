@@ -1,7 +1,7 @@
 // MileMark — static, local-only maintenance reminders.
 // ==== SET THESE BEFORE SELLING ====
 const GUMROAD_PRODUCT_ID = "nI-yteM-pSl1Ml4EuIg_oA=="; // Gumroad product > Content/settings > product_id
-const GUMROAD_URL = "https://sladepatterson.gumroad.com/l/qcwpwp";   // your Gumroad product page
+const GUMROAD_URL = "https://pocketappstudio.gumroad.com/l/qcwpwp";   // your Gumroad product page
 // ==================================
 const DEFAULT_RATE = 37, DAY = 864e5, KEY = "milemark.v1";
 const $ = s => document.querySelector(s), fmt = n => Math.round(n).toLocaleString();
@@ -203,7 +203,7 @@ async function openReport() {
    <h3>Last service dates</h3><table><tr><th>Service</th><th>Last done</th><th>Odometer</th></tr>${Object.values(last).map(l => `<tr><td>${esc(it(l.item))}</td><td>${l.date}</td><td>${fmt(l.odo)}</td></tr>`).join("") || '<tr><td colspan="3" class="muted">No services logged yet.</td></tr>'}</table>
    <h3>Service history</h3><table><tr><th>Date</th><th>Miles</th><th>Service & parts</th><th>Done by</th><th>Cost</th></tr>${rows.join("")}</table>
    ${st.pro ? "" : `<div class="lock"><b>Preview.</b> Unlock Pro for the full report, receipt photos, print to PDF and sharing.<br><br><button onclick="openPro('')">Unlock Pro</button></div>`}
-   <p class="muted" style="margin-top:16px">This report lists maintenance recorded by the owner in MileMark. MileMark does not verify entries. Schedules are general guidance; the owner's manual is the authority.</p>`;
+   <p class="muted" style="margin-top:16px">This report lists maintenance recorded by the owner in MileMark. MileMark does not verify entries. Schedules come from the manufacturer's official owner's manual, with the page cited; the owner's manual is the authority.</p>`;
   $("#report").classList.remove("hidden"); document.body.classList.add("rep");
 }
 function closeReport() { $("#report").classList.add("hidden"); document.body.classList.remove("rep"); }
