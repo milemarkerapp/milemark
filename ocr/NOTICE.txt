@@ -1,0 +1,5 @@
+The offline scanner bundled in this folder is third-party open-source software, used unmodified:
+- tesseract.js 5.1.1 (worker.min.js, tesseract.min.js) - Apache License 2.0 - https://github.com/naptha/tesseract.js
+- tesseract.js-core 5.1.1 (tesseract-core-*.wasm.js, built from Tesseract OCR and Leptonica) - Apache License 2.0 - https://github.com/naptha/tesseract.js-core
+- eng.traineddata (Tesseract "best" English model, integer version) - Apache License 2.0 - https://github.com/tesseract-ocr/tessdata_best
+Licensed under the Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0). Provided "AS IS", without warranties.

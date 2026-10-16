@@ -51,7 +51,8 @@ function deleteCustom() {
 const blobToData = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
 async function dataToBlob(u) { return (await fetch(u)).blob(); }
 async function allPhotos() {
-  const out = {}; for (const v of st.vehicles) for (const l of v.log) if (l.photo) { const b = await getPhoto(l.at); if (b) out[l.at] = await blobToData(b); }
+  const out = {}; for (const v of st.vehicles) for (const l of v.log) { if (l.photo) { const b = await getPhoto(l.at); if (b) out[l.at] = await blobToData(b); } if (l.mph) { const b = await getPhoto("m" + l.at); if (b) out["m" + l.at] = await blobToData(b); } }
+  for (const v of st.vehicles) for (const r of v.readings || []) if (r.photo) { const b = await getPhoto("o" + r.at); if (b) out["o" + r.at] = await blobToData(b); }
   return out;
 }
 async function backup() {
@@ -69,8 +70,8 @@ async function restoreFile(f) {
   const keep = { pro: st.pro, lic: st.lic, iosTip: st.iosTip };
   st = { notified: {}, ...state, ...keep, lastBackup: Date.now() };
   st.cur = st.vehicles.find(v => v.id === st.cur) ? st.cur : st.vehicles[0]?.id || null;
-  let n = 0; for (const [k, u] of Object.entries(o.photos || {})) { try { await savePhoto(+k, await dataToBlob(u)); n++; } catch (e) {} }
-  save(); render(); alert(`Restored ${st.vehicles.length} vehicle${st.vehicles.length === 1 ? "" : "s"}${n ? ` and ${n} receipt photo${n === 1 ? "" : "s"}` : ""}.`);
+  let n = 0; for (const [k, u] of Object.entries(o.photos || {})) { try { await savePhoto(/^[mo]/.test(k) ? k : +k, await dataToBlob(u)); n++; } catch (e) {} }
+  save(); render(); alert(`Restored ${st.vehicles.length} vehicle${st.vehicles.length === 1 ? "" : "s"}${n ? ` and ${n} photo${n === 1 ? "" : "s"}` : ""}.`);
 }
 
 // ---------- banners: backup reminder, iPhone tip ----------
@@ -81,7 +82,7 @@ function banners() {
   const hasData = st.vehicles.some(v => v.log.length) || st.vehicles.length > 0;
   const since = st.lastBackup || st.vehicles.reduce((m, v) => Math.min(m, v.startAt || Date.now()), Date.now());
   if (hasData && Date.now() - since > 30 * DAY && (!st.snoozeBackup || Date.now() > st.snoozeBackup))
-    B.push(`<div class="banner" id="bkBanner"><div><b>Time for a backup.</b> Your data lives only on this device. Save a backup file somewhere safe (it includes receipt photos).</div><div class="row"><button class="sm" data-bk="1">Back up now</button><button class="ghost sm" data-bksnooze="1">Later</button></div></div>`);
+    B.push(`<div class="banner" id="bkBanner"><div><b>Time for a backup.</b> Your data lives only on this device. Save a backup file somewhere safe (it includes your photos).</div><div class="row"><button class="sm" data-bk="1">Back up now</button><button class="ghost sm" data-bksnooze="1">Later</button></div></div>`);
   if (isIOS() && !standalone() && !st.iosTip)
     B.push(`<div class="banner" id="iosTip"><div><b>iPhone tip:</b> tap the Share button, then <b>Add to Home Screen</b>. MileMark then opens like an app, can send reminders, and Safari is much less likely to clear its data.</div><button class="ghost sm" data-iostip="1">Got it</button></div>`);
   el.innerHTML = B.join("");

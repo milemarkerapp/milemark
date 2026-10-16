@@ -75,24 +75,25 @@ function showForm(edit) {
   const v = edit && veh(); $("#formTitle").textContent = v ? "Edit vehicle" : "Set up your vehicle";
   $("#fModel").value = v ? v.make + "|" + v.model : ""; $("#fYear").value = v?.year || ""; $("#fCur").value = v ? est(v) : "";
   $("#fName").value = v?.name || ""; $("#fRate").value = v ? Math.round(v.rate) : ""; $("#fDuty").value = v?.duty || "n"; fillEng(v?.engine || "");
-  $("#saveVeh").dataset.edit = v ? v.id : "";
+  $("#saveVeh").dataset.edit = v ? v.id : ""; clearProof();
 }
 function saveVeh() {
   const [make, model] = ($("#fModel").value || "").split("|"), cur = +$("#fCur").value;
   if (!make) return alert("Pick a make and model.");
   if (!$("#fCur").value || cur < 0) return alert("Enter your current odometer.");
-  const id = $("#saveVeh").dataset.edit, rate = +$("#fRate").value || 0;
-  if (id) { const v = veh(); Object.assign(v, { make, model, year: $("#fYear").value, name: $("#fName").value, duty: $("#fDuty").value, engine: $("#fEng").value }); if (rate) v.rate = rate; if (cur !== est(v)) correct(v, cur); }
+  const id = $("#saveVeh").dataset.edit, rate = +$("#fRate").value || 0, pb = takeProof("fCur"), now = Date.now();
+  if (id) { const v = veh(); Object.assign(v, { make, model, year: $("#fYear").value, name: $("#fName").value, duty: $("#fDuty").value, engine: $("#fEng").value }); if (rate) v.rate = rate; if (cur !== est(v)) correct(v, cur, pb); }
   else {
     if (st.vehicles.length >= 1 && !st.pro) return openPro("Free covers one vehicle. Unlock Pro for unlimited vehicles.");
     const v = { id: Date.now().toString(36), make, model, year: $("#fYear").value, name: $("#fName").value, duty: $("#fDuty").value, engine: $("#fEng").value, rate: rate || DEFAULT_RATE, rateSet: !!rate,
-      startOdo: cur, startAt: Date.now(), anchorOdo: cur, anchorAt: Date.now(), readings: [{ odo: cur, at: Date.now() }], log: [] };
+      startOdo: cur, startAt: now, anchorOdo: cur, anchorAt: now, readings: [{ odo: cur, at: now }], log: [] };
+    if (pb) { v.readings[0].photo = true; savePhoto("o" + now, pb); }
     st.vehicles.push(v); st.cur = v.id;
   }
   save(); $("#formCard").classList.add("hidden"); render();
 }
-function correct(v, odo) { // refine the miles/day rate from real readings
-  v.readings.push({ odo, at: Date.now() });
+function correct(v, odo, proof) { // refine the miles/day rate from real readings
+  const at = Date.now(), r = { odo, at }; if (proof) { r.photo = true; savePhoto("o" + at, proof); } v.readings.push(r);
   const f = v.readings[0], days = (Date.now() - f.at) / DAY;
   if (days >= 5 && odo > f.odo && !v.rateSet) v.rate = Math.min(400, Math.max(1, (odo - f.odo) / days));
   v.anchorOdo = odo; v.anchorAt = Date.now();
@@ -117,7 +118,7 @@ function render() {
   $("#timeline").innerHTML = `<div class="tl"><div class="tlm done"><b>${fmt(v.startOdo)} mi</b> <span class="muted">start</span></div>` + keys.map(k => { let h = ""; if (!shown && k > e) { shown = true; h = `<div class="tlm today"><b>${fmt(e)} mi</b> <span class="muted">today (est.)</span></div>`; }
     const allDone = marks[k].every(x => v.log.some(l => l.item === x.id && Math.abs(l.odo - k) <= iv(v, x) * 0.5));
     return h + `<div class="tlm ${allDone ? "done" : k <= e ? "past" : ""}"><b>${fmt(k)} mi</b><div class="muted">${marks[k].map(x => esc(x.name)).join(" · ")}</div></div>`; }).join("") + "</div>";
-  $("#log").innerHTML = v.log.length ? [...v.log].sort((a, b) => b.odo - a.odo).map((l, i) => `<div class="item"><div><b>${esc(itemName(v, l))}</b><div class="mi">${fmt(l.odo)} mi · ${l.date}${l.who ? " · " + esc(l.who) : ""}${l.cost != null ? " · $" + l.cost.toFixed(2) : ""}${l.parts ? "<br>Parts: " + esc(l.parts) : ""}${l.photo ? " · 📎 receipt" : ""}${l.note ? " · " + esc(l.note) : ""}</div></div><div class="row"><button class="mv" data-edlog="${l.at}" title="Edit" aria-label="Edit entry">✎</button><button class="x" data-unlog="${l.at}" title="Delete">✕</button></div></div>`).join("") : '<p class="muted">Tap ✓ Done on any service to log it. Mileage fills in automatically.</p>';
+  $("#log").innerHTML = v.log.length ? [...v.log].sort((a, b) => b.odo - a.odo).map((l, i) => `<div class="item"><div><b>${esc(itemName(v, l))}</b><div class="mi">${fmt(l.odo)} mi · ${l.date}${l.who ? " · " + esc(l.who) : ""}${l.cost != null ? " · $" + l.cost.toFixed(2) : ""}${l.parts ? "<br>Parts: " + esc(l.parts) : ""}${l.photo ? " · 📎 receipt" : ""}${l.mph ? " · 📷 odometer" : ""}${l.note ? " · " + esc(l.note) : ""}</div></div><div class="row"><button class="mv" data-edlog="${l.at}" title="Edit" aria-label="Edit entry">✎</button><button class="x" data-unlog="${l.at}" title="Delete">✕</button></div></div>`).join("") : '<p class="muted">Tap ✓ Done on any service to log it. Mileage fills in automatically.</p>';
   $("#vParts").innerHTML = vehPartsHTML(v);
   $("#notifBtn").textContent = "Notification" in window && Notification.permission === "granted" ? "Reminders on ✓" : "Turn on reminders";
   notifyDue(); banners();
@@ -125,24 +126,24 @@ function render() {
 let doneItem, editAt = null, doneDirty = false;
 function openDone(id) {
   const v = veh(), sc = schedule(v), it = sc.items.concat(sc.chk).find(x => x.id === id); doneItem = id; editAt = null; doneDirty = false; $("#doneSave").textContent = "Log it";
-  $("#doneTitle").textContent = it.name; $("#doneMi").value = est(v); $("#doneDate").value = today(); $("#doneNote").value = ""; $("#doneParts").value = partGuess(v, id); $("#doneCost").value = ""; $("#doneWho").value = lastWho(); $("#donePhoto").value = "";
+  $("#doneTitle").textContent = it.name; $("#doneMi").value = est(v); $("#doneDate").value = today(); $("#doneNote").value = ""; $("#doneParts").value = partGuess(v, id); $("#doneCost").value = ""; $("#doneWho").value = lastWho(); $("#donePhoto").value = ""; clearProof();
   $("#doneDlg").showModal();
 }
 function openEditLog(at) {
   const v = veh(), l = v.log.find(x => x.at === at); if (!l) return; editAt = at; doneItem = l.item; doneDirty = false;
   $("#doneTitle").textContent = "Edit: " + itemName(v, l); $("#doneSave").textContent = "Save changes";
-  $("#doneMi").value = l.odo; $("#doneDate").value = l.date; $("#doneNote").value = l.note || ""; $("#doneParts").value = l.parts || ""; $("#doneCost").value = l.cost ?? ""; $("#doneWho").value = l.who || ""; $("#donePhoto").value = "";
+  $("#doneMi").value = l.odo; $("#doneDate").value = l.date; $("#doneNote").value = l.note || ""; $("#doneParts").value = l.parts || ""; $("#doneCost").value = l.cost ?? ""; $("#doneWho").value = l.who || ""; $("#donePhoto").value = ""; clearProof();
   $("#doneDlg").showModal();
 }
 function closeDone(force) { if (!force && doneDirty && !confirm("Discard your unsaved changes?")) return false; doneDirty = false; $("#doneDlg").close(); return true; }
 function logDone() {
-  const v = veh(), odo = +$("#doneMi").value || est(v), f = $("#donePhoto").files[0];
+  const v = veh(), odo = +$("#doneMi").value || est(v), f = $("#donePhoto").files[0], pb = takeProof("doneMi");
   if (editAt) { const l = v.log.find(x => x.at === editAt);
     Object.assign(l, { odo, date: $("#doneDate").value || l.date, note: $("#doneNote").value, parts: $("#doneParts").value, cost: $("#doneCost").value !== "" ? +$("#doneCost").value : null, who: $("#doneWho").value });
-    if (f) { l.photo = true; savePhoto(l.at, f); } editAt = null; closeDone(true); save(); render(); return; }
+    if (f) { l.photo = true; savePhoto(l.at, f); } if (pb) { l.mph = true; savePhoto("m" + l.at, pb); } editAt = null; closeDone(true); save(); render(); return; }
   const at = Date.now();
-  v.log.push({ item: doneItem, odo, date: $("#doneDate").value || today(), note: $("#doneNote").value, parts: $("#doneParts").value, cost: $("#doneCost").value ? +$("#doneCost").value : null, who: $("#doneWho").value, photo: !!f, at });
-  if (f) savePhoto(at, f);
+  v.log.push({ item: doneItem, odo, date: $("#doneDate").value || today(), note: $("#doneNote").value, parts: $("#doneParts").value, cost: $("#doneCost").value ? +$("#doneCost").value : null, who: $("#doneWho").value, photo: !!f, mph: !!pb, at });
+  if (f) savePhoto(at, f); if (pb) savePhoto("m" + at, pb);
   if (odo > est(v) + 50 || odo < est(v) - 50) correct(v, odo); // a logged mileage is a real reading
   closeDone(true); save(); render();
 }
@@ -196,12 +197,14 @@ async function openReport() {
   const last = {}; logs.forEach(l => last[l.item] = l);
   const title = `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim();
   const rows = await Promise.all(logs.map(async (l, i) => { let img = ""; if (l.photo && st.pro) { const b = await getPhoto(l.at); if (b) img = `<img class="rthumb" src="${URL.createObjectURL(b)}" alt="receipt">`; }
+    if (l.mph && st.pro) { const b = await getPhoto("m" + l.at); if (b) img += `<img class="rthumb" src="${URL.createObjectURL(b)}" alt="odometer photo">`; }
     return `<tr class="${!st.pro && i >= 2 ? "blur" : ""}"><td>${l.date}</td><td>${fmt(l.odo)}</td><td><b>${esc(it(l.item))}</b>${l.parts ? `<br>${esc(l.parts)}` : ""}${l.note ? `<br><span class="muted">${esc(l.note)}</span>` : ""}${img}</td><td>${esc(l.who || "")}</td><td>${l.cost != null ? "$" + l.cost.toFixed(2) : ""}</td></tr>`; }));
+  const odoPics = st.pro ? (await Promise.all((v.readings || []).filter(r => r.photo).map(async r => { const b = await getPhoto("o" + r.at); return b ? `<div class="opic"><img class="rthumb" src="${URL.createObjectURL(b)}" alt="odometer photo"><span>${new Date(r.at).toLocaleDateString()} · ${fmt(r.odo)} mi</span></div>` : ""; }))).join("") : "";
   $("#rBody").innerHTML = `<h1>Vehicle History Report</h1><div class="muted">Generated ${new Date().toLocaleDateString()} with MileMark · owner-recorded maintenance log</div>
    <h2 style="margin-top:14px">${esc(title)}${v.name ? ` <span class="muted">(${esc(v.name)})</span>` : ""}</h2>
    <div class="kpi"><div><b>${fmt(est(v))} mi</b>Current odometer (est.)</div><div><b>${c.ok} of ${c.due}</b>factory services done on time since ${fmt(v.startOdo)} mi</div><div><b>${logs.length}</b>services logged${spent ? ` · $${fmt(spent)} spent` : ""}</div></div>
    <h3>Last service dates</h3><table><tr><th>Service</th><th>Last done</th><th>Odometer</th></tr>${Object.values(last).map(l => `<tr><td>${esc(it(l.item))}</td><td>${l.date}</td><td>${fmt(l.odo)}</td></tr>`).join("") || '<tr><td colspan="3" class="muted">No services logged yet.</td></tr>'}</table>
-   <h3>Service history</h3><table><tr><th>Date</th><th>Miles</th><th>Service & parts</th><th>Done by</th><th>Cost</th></tr>${rows.join("")}</table>
+   <h3>Service history</h3><table><tr><th>Date</th><th>Miles</th><th>Service & parts</th><th>Done by</th><th>Cost</th></tr>${rows.join("")}</table>${odoPics ? `<h3>Odometer photos</h3><div class="opics">${odoPics}</div>` : ""}
    ${st.pro ? "" : `<div class="lock"><b>Preview.</b> Unlock Pro for the full report, receipt photos, print to PDF and sharing.<br><br><button onclick="openPro('')">Unlock Pro</button></div>`}
    <p class="muted" style="margin-top:16px">This report lists maintenance recorded by the owner in MileMark. MileMark does not verify entries. Schedules come from the manufacturer's official owner's manual, with the page cited; the owner's manual is the authority.</p>`;
   $("#report").classList.remove("hidden"); document.body.classList.add("rep");
@@ -280,13 +283,15 @@ document.addEventListener("click", e => {
   else if (d.up || d.down) moveVeh(d.up || d.down, d.up ? -1 : 1);
   else if (d.iv) openIv(d.iv);
   else if (d.edlog) openEditLog(+d.edlog);
-  else if (d.unlog) { const v = veh(); v.log = v.log.filter(l => String(l.at) !== d.unlog); delPhoto(+d.unlog); save(); render(); }
+  else if (d.unlog) { const v = veh(); v.log = v.log.filter(l => String(l.at) !== d.unlog); delPhoto(+d.unlog); delPhoto("m" + d.unlog); save(); render(); }
   else if (t.closest(".veh")) { st.cur = t.closest(".veh").dataset.id; save(); render(); }
 });
 $("#addVeh").onclick = () => (st.vehicles.length && !st.pro) ? openPro("Free covers one vehicle. Unlock Pro for unlimited vehicles.") : showForm();
 $("#editVeh").onclick = () => showForm(true); $("#saveVeh").onclick = saveVeh;
 $("#cancelVeh").onclick = () => { $("#formCard").classList.add("hidden"); render(); };
-$("#fixOdo").onclick = () => { const v = veh(), n = prompt("What does the odometer read now?", est(v)); if (n && +n >= 0) { correct(v, +n); save(); render(); } };
+$("#fixOdo").onclick = () => { clearProof(); $("#odoVal").value = est(veh()); $("#odoDlg").showModal(); };
+$("#odoSave").onclick = () => { const n = $("#odoVal").value; if (n === "" || +n < 0) return alert("Enter the odometer."); correct(veh(), +n, takeProof("odoVal")); save(); render(); $("#odoDlg").close(); };
+$("#odoCancel").onclick = () => $("#odoDlg").close();
 $("#duty").onchange = e => { veh().duty = e.target.value; save(); render(); };
 $("#doneSave").onclick = logDone; $("#doneCancel").onclick = () => closeDone();
 $("#doneDlg").addEventListener("input", () => doneDirty = true);
