@@ -19,6 +19,8 @@ Every interval and spec in the app comes from the manufacturer's official owner'
 - **Nissan Altima**: 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025
 - **Nissan Rogue**: 2019, 2020, 2021, 2022, 2023, 2024, 2025
 - **Nissan Sentra**: 2021, 2022, 2023, 2024, 2025
+- **Subaru Crosstrek, Forester, Impreza, Legacy, Outback, WRX**: 2015, 2016, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025
+- **Subaru Ascent**: 2019, 2020, 2021, 2022, 2023, 2024, 2025
 - **Toyota 4Runner**: 2015, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025
 - **Toyota Camry**: 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025
 - **Toyota Corolla**: 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025
@@ -1382,3 +1384,11 @@ Every interval and spec in the app comes from the manufacturer's official owner'
   - Ford: 33 entries still cite the landing page. No fordservicecontent URL was ever logged, and fordservicecontent.com returns 403 (Akamai) to this machine, so no candidate could be verified.
   - Toyota owner's-manual (`*-OwnersManual.pdf`) parts citations: no logged URL.
 - Service worker bumped to milemark-v15.
+
+## Subaru (added Oct 17 2026)
+
+Source: Subaru's official Warranty & Maintenance Booklet for each model year (one booklet covers all models), from techinfo.subaru.com. 2020-2023 files were downloaded earlier (no URL logged, so the url field is blank). Schedule table page (PDF page) is cited on each item; the severe-use notes are on the next page. Each interval was read from the booklet's schedule grid (column positions checked against the page image). Oil, tire rotation, cabin filter, air filter, plugs, coolant, brake fluid, fuel filter and CVT fluid are included; the WRX timing belt is included for 2015-2016 only (later booklets list it for WRX STI only). Booklets give no oil grade, capacity or part numbers, so those show "check owner's manual". 2017: not on Subaru's official host (the old mysubaru.com link returns a web page, not the PDF), so skipped.
+
+## Honda (not added)
+
+Honda's official manual host (techinfo.honda.com) fails TLS validation from this machine (unable to get local issuer certificate) and owners.honda.com redirects to a JavaScript-only site. Per the rule, TLS was not bypassed and no third-party source was used, so no Honda model-year was added.
