@@ -1,18 +1,18 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MileMark: Maintenance by the Mile</title><meta name="description" content="Free car maintenance reminders from your owner's manual, page cited. 427 model-years, 11 brands. Works offline. No account, no subscription.">
+<title>MileMark: Maintenance by the Mile</title><meta name="description" content="Car maintenance reminders from your owner's manual, page cited. 427 model-years, 11 brands. Works offline. No account. $9 one-time, no subscription.">
 <meta name="theme-color" content="#0a1020"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png"><link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png"><link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"><link rel="stylesheet" href="styles.css"><link rel="canonical" href="https://milemarkerapp.github.io/milemark/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="MileMark: Car maintenance reminders from your owner's manual">
-<meta property="og:description" content="Free car maintenance reminders from your owner's manual, page cited. 427 model-years, 11 brands. Works offline. No account, no subscription.">
+<meta property="og:description" content="Car maintenance reminders from your owner's manual, page cited. 427 model-years, 11 brands. Works offline. No account. $9 one-time, no subscription.">
 <meta property="og:url" content="https://milemarkerapp.github.io/milemark/">
 <meta property="og:image" content="https://milemarkerapp.github.io/milemark/og.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MileMark: Car maintenance reminders from your owner's manual">
-<meta name="twitter:description" content="Free car maintenance reminders from your owner's manual, page cited. 427 model-years, 11 brands. Works offline.">
+<meta name="twitter:description" content="Car maintenance reminders from your owner's manual, page cited. 427 model-years, 11 brands. Works offline. $9 one-time.">
 <meta name="twitter:image" content="https://milemarkerapp.github.io/milemark/og.png">
 </head><body>
-<header class="top"><div class="brand"><img src="logo-64.png" alt="" width="32" height="32">Mile<span>Mark</span></div><button id="unlockBtn" class="ghost sm">Unlock Pro</button></header>
+<header class="top"><div class="brand"><img src="logo-64.png" alt="" width="32" height="32">Mile<span>Mark</span></div></header>
 <main>
 <div id="banners"></div>
 <section class="card" id="vehCard"><div class="row between"><h2>My vehicles</h2><button id="addVeh" class="sm">+ Add</button></div><div id="vehList"></div></section>
@@ -36,7 +36,7 @@
 <div class="card"><h2>Timeline</h2><p class="muted">From your starting mileage to 30,000 miles past today.</p><div id="timeline"></div></div>
 <div class="card" id="compCard"><div class="row between"><h2>Completed</h2><div class="row"><select id="compFilter" class="sm inl" aria-label="Filter"></select><button id="compRep" class="sm">Replaced a part</button></div></div><div id="compSum" class="muted"></div><div id="completed"></div></div>
 <div class="card"><div class="row between"><h2>Service log</h2><button id="pastBtn" class="ghost sm">+ Past service</button></div><div id="log"></div></div>
-<div class="card row wrap"><button id="reportBtn">Vehicle History Report</button><button id="printBtn" class="ghost">Print</button><button id="csvBtn" class="ghost">Export CSV</button><button id="jsonBtn" class="ghost">Back up (free)</button><label class="filebtn ghost">Restore backup<input id="restore" type="file" accept=".json,application/json" hidden></label><a class="btn ghost" href="help.html">Help</a></div>
+<div class="card row wrap"><button id="reportBtn">Vehicle History Report</button><button id="printBtn" class="ghost">Print</button><button id="csvBtn" class="ghost">Export CSV</button><button id="jsonBtn" class="ghost">Back up</button><label class="filebtn ghost">Restore backup<input id="restore" type="file" accept=".json,application/json" hidden></label><a class="btn ghost" href="help.html">Help</a></div>
 </section>
 <p class="disclaimer">Intervals come from the manufacturer's official owner's manual or maintenance guide for your model year, with the manual and page cited. Pick your engine for exact values. <b>Your owner's manual and your vehicle's maintenance reminder are the authority.</b></p>
 </main>
@@ -80,9 +80,9 @@
 <div id="ivMsg" class="muted"></div>
 <div class="row wrap"><button id="ivSave">Save</button><button id="ivCancel" class="ghost">Cancel</button><button id="ivReset" class="ghost">Use factory interval</button><button id="ivDelete" class="ghost">Delete</button></div></dialog>
 <div id="report" class="hidden"><div class="rbar"><button id="rClose" class="ghost sm">← Back</button><div class="row"><button id="rShare" class="ghost sm">Share</button><button id="rPrint" class="sm">Print / Save PDF</button></div></div><div id="rBody" class="rpage"></div></div>
-<dialog id="proDlg"><h3>MileMark Pro</h3><p>Free covers one vehicle and a preview of the Vehicle History Report. Pro adds unlimited vehicles, the full printable and shareable history report with receipt photos, and CSV export. Backup and restore are free. One payment, no subscription, ever. Your data never leaves your phone. <a href="help.html#license">How activation works</a></p>
-<p><a id="buyLink" class="btn" target="_blank" rel="noopener">Buy on Gumroad</a></p><label>License key<input id="licKey" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX"></label><div id="licMsg" class="muted"></div>
-<div class="row"><button id="licGo">Activate</button><button id="proClose" class="ghost">Close</button></div></dialog>
+<div id="lock" class="hidden" role="dialog" aria-label="Unlock MileMark"><div class="lkbox"><img src="icon-192.png" alt="MileMark" width="96" height="96"><h1>Mile<span>Mark</span></h1><p class="lkprice">$9 one-time</p>
+<a id="buyLink" class="btn" target="_blank" rel="noopener">Buy</a><label>License key<input id="licKey" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" autocomplete="off" autocapitalize="off"></label><div id="licMsg" class="muted" aria-live="polite"></div><button id="licGo">Activate</button>
+<div class="row lkrow"><button id="lkBackup" class="ghost sm">Back up</button><label class="filebtn ghost sm">Restore backup<input id="lkRestore" type="file" accept=".json,application/json" hidden></label></div></div></div>
 <footer><a href="help.html">Help</a> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · Support and refunds through Gumroad · © MileMark</footer>
 <dialog id="odoDlg"><h3>Update odometer</h3>
 <label>Odometer<input id="odoVal" type="number" min="0" inputmode="numeric"><button type="button" class="ghost sm scanbtn" data-scan="odoVal" data-keep="0">Scan odometer</button></label>

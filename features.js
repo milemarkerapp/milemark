@@ -1,4 +1,4 @@
-// MileMark extras: interval editing, custom services, free backup with photos, reorder, banners.
+// MileMark extras: interval editing, custom services, backup with photos, reorder, banners.
 // Loaded before app.js; everything here runs only when called.
 
 // ---------- vehicle order ----------
@@ -47,7 +47,7 @@ function deleteCustom() {
   v.custom = v.custom.filter(x => x.id !== ivId); $("#ivDlg").close(); save(); render();
 }
 
-// ---------- backup & restore (free; includes receipt photos) ----------
+// ---------- backup & restore (includes receipt photos) ----------
 const blobToData = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
 async function dataToBlob(u) { return (await fetch(u)).blob(); }
 async function allPhotos() {

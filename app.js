@@ -86,7 +86,6 @@ function saveVeh() {
   const id = $("#saveVeh").dataset.edit, rate = +$("#fRate").value || 0, pb = takeProof("fCur"), now = Date.now();
   if (id) { const v = veh(); Object.assign(v, { make, model, year: $("#fYear").value, name: $("#fName").value, duty: $("#fDuty").value, engine: $("#fEng").value }); if (rate) v.rate = rate; if (cur !== est(v)) { if (!lowerOk(v, cur)) return; correct(v, cur, pb); } }
   else {
-    if (st.vehicles.length >= 1 && !st.pro) return openPro("Free covers one vehicle. Unlock Pro for unlimited vehicles.");
     const v = { id: Date.now().toString(36), make, model, year: $("#fYear").value, name: $("#fName").value, duty: $("#fDuty").value, engine: $("#fEng").value, rate: rate || DEFAULT_RATE, rateSet: !!rate,
       startOdo: cur, startAt: now, anchorOdo: cur, anchorAt: now, readings: [{ odo: cur, at: now }], log: [] };
     if (pb) { v.readings[0].photo = true; savePhoto("o" + now, pb); }
@@ -101,7 +100,7 @@ function correct(v, odo, proof) { // refine the miles/day rate from real reading
   v.anchorOdo = odo; v.anchorAt = Date.now();
 }
 function render() {
-  $("#unlockBtn").textContent = st.pro ? "Pro ✓" : "Unlock Pro";
+  lockUI();
   $("#vehList").innerHTML = st.vehicles.length ? st.vehicles.map(v => `<div class="veh ${v.id === st.cur ? "on" : ""}" data-id="${v.id}"><div><b>${esc(v.name || `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim())}</b><div class="muted">~${fmt(est(v))} mi${vBadge(v)}</div></div><div class="row"><button class="mv" data-up="${v.id}" title="Move up" aria-label="Move up">↑</button><button class="mv" data-down="${v.id}" title="Move down" aria-label="Move down">↓</button><button class="x" data-del="${v.id}" title="Remove">✕</button></div></div>`).join("") : '<p class="muted">No vehicle yet. Tap + Add to start.</p>';
   const v = veh(); if (!v) { $("#dash").classList.add("hidden"); if (!st.vehicles.length) showForm(); return; }
   $("#dash").classList.remove("hidden");
@@ -203,22 +202,20 @@ async function openReport() {
   const logs = [...v.log].sort((a, b) => a.odo - b.odo), spent = logs.reduce((t, l) => t + (l.cost || 0), 0);
   const last = {}; logs.forEach(l => last[l.item] = l);
   const title = `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim();
-  const rows = await Promise.all(logs.map(async (l, i) => { let img = ""; if (l.photo && st.pro) { const b = await getPhoto(l.at); if (b) img = `<img class="rthumb" src="${URL.createObjectURL(b)}" alt="receipt">`; }
-    if (l.mph && st.pro) { const b = await getPhoto("m" + l.at); if (b) img += `<img class="rthumb" src="${URL.createObjectURL(b)}" alt="odometer photo">`; }
-    return `<tr class="${!st.pro && i >= 2 ? "blur" : ""}"><td>${l.date}</td><td>${fmt(l.odo)}</td><td><b>${esc(it(l.item))}</b>${l.reset ? ' <span class="tag t-ok">Replaced</span>' : ""}${l.parts ? `<br>${esc(l.parts)}` : ""}${l.note ? `<br><span class="muted">${esc(l.note)}</span>` : ""}${img}</td><td>${esc(l.who || "")}</td><td>${l.cost != null ? "$" + l.cost.toFixed(2) : ""}</td></tr>`; }));
-  const odoPics = st.pro ? (await Promise.all((v.readings || []).filter(r => r.photo).map(async r => { const b = await getPhoto("o" + r.at); return b ? `<div class="opic"><img class="rthumb" src="${URL.createObjectURL(b)}" alt="odometer photo"><span>${new Date(r.at).toLocaleDateString()} · ${fmt(r.odo)} mi</span></div>` : ""; }))).join("") : "";
+  const rows = await Promise.all(logs.map(async (l, i) => { let img = ""; if (l.photo) { const b = await getPhoto(l.at); if (b) img = `<img class="rthumb" src="${URL.createObjectURL(b)}" alt="receipt">`; }
+    if (l.mph) { const b = await getPhoto("m" + l.at); if (b) img += `<img class="rthumb" src="${URL.createObjectURL(b)}" alt="odometer photo">`; }
+    return `<tr><td>${l.date}</td><td>${fmt(l.odo)}</td><td><b>${esc(it(l.item))}</b>${l.reset ? ' <span class="tag t-ok">Replaced</span>' : ""}${l.parts ? `<br>${esc(l.parts)}` : ""}${l.note ? `<br><span class="muted">${esc(l.note)}</span>` : ""}${img}</td><td>${esc(l.who || "")}</td><td>${l.cost != null ? "$" + l.cost.toFixed(2) : ""}</td></tr>`; }));
+  const odoPics = (await Promise.all((v.readings || []).filter(r => r.photo).map(async r => { const b = await getPhoto("o" + r.at); return b ? `<div class="opic"><img class="rthumb" src="${URL.createObjectURL(b)}" alt="odometer photo"><span>${new Date(r.at).toLocaleDateString()} · ${fmt(r.odo)} mi</span></div>` : ""; }))).join("");
   $("#rBody").innerHTML = `<h1>Vehicle History Report</h1><div class="muted">Generated ${new Date().toLocaleDateString()} with MileMark · owner-recorded maintenance log</div>
    <h2 style="margin-top:14px">${esc(title)}${v.name ? ` <span class="muted">(${esc(v.name)})</span>` : ""}</h2>
    <div class="kpi"><div><b>${fmt(est(v))} mi</b>Current odometer (est.)</div><div><b>${c.ok} of ${c.due}</b>factory services done on time since ${fmt(v.startOdo)} mi</div><div><b>${logs.length}</b>services logged${spent ? ` · $${fmt(spent)} spent` : ""}</div>${logs.some(l => l.reset) ? `<div><b>${logs.filter(l => l.reset).length}</b>parts replaced</div>` : ""}</div>
    <h3>Last service dates</h3><table><tr><th>Service</th><th>Last done</th><th>Odometer</th><th>Next due</th></tr>${Object.values(last).map(l => { const x = ST.find(s => s.id === l.item); return `<tr><td>${esc(it(l.item))}</td><td>${l.date}${l.reset ? " (replaced)" : ""}</td><td>${fmt(l.odo)}</td><td>${x ? fmt(x.due) + " mi" : ""}</td></tr>`; }).join("") || '<tr><td colspan="4" class="muted">No services logged yet.</td></tr>'}</table>
    <h3>Service history</h3><table><tr><th>Date</th><th>Miles</th><th>Service & parts</th><th>Done by</th><th>Cost</th></tr>${rows.join("")}</table>${odoPics ? `<h3>Odometer photos</h3><div class="opics">${odoPics}</div>` : ""}
-   ${st.pro ? "" : `<div class="lock"><b>Preview.</b> Unlock Pro for the full report, receipt photos, print to PDF and sharing.<br><br><button onclick="openPro('')">Unlock Pro</button></div>`}
    <p class="muted" style="margin-top:16px">This report lists maintenance recorded by the owner in MileMark. MileMark does not verify entries. Schedules come from the manufacturer's official owner's manual, with the page cited; the owner's manual is the authority.</p>`;
   $("#report").classList.remove("hidden"); document.body.classList.add("rep");
 }
 function closeReport() { $("#report").classList.add("hidden"); document.body.classList.remove("rep"); }
 async function shareReport() {
-  if (!st.pro) return openPro("Sharing the report is part of Pro.");
   const v = veh(), c = compliance(v), text = `${v.year || ""} ${v.make} ${v.model}: ${v.log.length} services logged, ${c.ok} of ${c.due} factory services done on time. Odometer ~${fmt(est(v))} mi.`;
   const html = `<!doctype html><meta charset="utf-8"><title>Vehicle History Report</title><style>body{font:14px system-ui;max-width:760px;margin:20px auto}table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #ddd;padding:5px;text-align:left}.kpi div{display:inline-block;margin-right:20px}.lock,.rthumb{display:none}</style>${$("#rBody").innerHTML}`;
   const file = new File([html], "vehicle-history-report.html", { type: "text/html" });
@@ -263,8 +260,8 @@ function ics() {
 }
 function dl(name, text, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name.replace(/\s+/g, "-"); a.click(); }
 
-// ---------- Pro / Gumroad ----------
-function openPro(msg) { $("#licMsg").textContent = msg || ""; $("#buyLink").href = GUMROAD_URL; $("#proDlg").showModal(); }
+// ---------- License (MileMark is $9 one-time; the app needs an activated key) ----------
+function lockUI() { const on = !st.pro; $("#lock").classList.toggle("hidden", !on); document.body.classList.toggle("locked", on); $("#buyLink").href = GUMROAD_URL; }
 async function activate() {
   const key = $("#licKey").value.trim(); if (!key) return;
   if (GUMROAD_PRODUCT_ID.startsWith("REPLACE")) return $("#licMsg").textContent = "Store setup not finished (product id missing).";
@@ -272,11 +269,11 @@ async function activate() {
   try {
     const r = await fetch("https://api.gumroad.com/v2/licenses/verify", { method: "POST", body: new URLSearchParams({ product_id: GUMROAD_PRODUCT_ID, license_key: key, increment_uses_count: "false" }) });
     const j = await r.json(), p = j.purchase || {};
-    if (j.success && !p.refunded && !p.chargebacked && !p.disputed) { st.pro = true; st.lic = key; save(); $("#licMsg").textContent = "Unlocked. Thanks!"; render(); }
-    else $("#licMsg").textContent = "That key wasn't accepted. For help, message us through Gumroad.";
+    if (j.success && !p.refunded && !p.chargebacked && !p.disputed) { st.pro = true; st.lic = key; save(); $("#licKey").value = ""; $("#licMsg").textContent = ""; render(); }
+    else $("#licMsg").textContent = "That key wasn't accepted.";
   } catch (e) { $("#licMsg").textContent = "Couldn't reach Gumroad. Check your connection and try again."; }
 }
-function needPro() { if (st.pro) return false; openPro("Export is part of Pro."); return true; }
+function needPro() { return false; }
 function csv() {
   if (needPro()) return; const rows = [["Vehicle", "Service", "Interval (mi)", "Next due (mi)", "Status", "Last done (mi)", "Last replaced (date)"]];
   st.vehicles.forEach(v => allStatus(v).forEach(x => rows.push([v.name || `${v.year} ${v.make} ${v.model}`, x.name, x.n, x.due, x.s, x.L?.odo || "", x.L?.reset ? x.L.date : ""])));
@@ -298,7 +295,7 @@ document.addEventListener("click", e => {
   else if (d.unlog) { const v = veh(); v.log = v.log.filter(l => String(l.at) !== d.unlog && String(l.grp) !== d.unlog); delPhoto(+d.unlog); delPhoto("m" + d.unlog); save(); render(); }
   else if (t.closest(".veh")) { st.cur = t.closest(".veh").dataset.id; save(); render(); }
 });
-$("#addVeh").onclick = () => (st.vehicles.length && !st.pro) ? openPro("Free covers one vehicle. Unlock Pro for unlimited vehicles.") : showForm();
+$("#addVeh").onclick = () => showForm();
 $("#editVeh").onclick = () => showForm(true); $("#saveVeh").onclick = saveVeh;
 $("#cancelVeh").onclick = () => { $("#formCard").classList.add("hidden"); render(); };
 function openOdo(id) { if (id && st.vehicles.some(v => v.id === id)) { st.cur = id; save(); render(); } if (!veh()) return; clearProof(); $("#odoVal").value = est(veh()); if (!$("#odoDlg").open) $("#odoDlg").showModal(); $("#odoVal").focus(); $("#odoVal").select(); }
@@ -310,10 +307,10 @@ $("#doneSave").onclick = logDone; $("#doneCancel").onclick = () => closeDone();
 $("#doneDlg").addEventListener("input", () => doneDirty = true);
 $("#doneDlg").addEventListener("cancel", e => { if (doneDirty && !confirm("Discard your unsaved changes?")) e.preventDefault(); else doneDirty = false; });
 $("#notifBtn").onclick = enableNotif; $("#icsBtn").onclick = ics; $("#printBtn").onclick = () => print();
-$("#csvBtn").onclick = csv; $("#reportBtn").onclick = openReport; $("#rClose").onclick = closeReport; $("#rPrint").onclick = () => st.pro ? print() : openPro("The full report, print and share are part of Pro."); $("#rShare").onclick = shareReport; $("#jsonBtn").onclick = backup;
+$("#csvBtn").onclick = csv; $("#reportBtn").onclick = openReport; $("#rClose").onclick = closeReport; $("#rPrint").onclick = () => print(); $("#rShare").onclick = shareReport; $("#jsonBtn").onclick = backup;
 $("#restore").onchange = e => restoreFile(e.target.files[0]).finally(() => e.target.value = "");
-$("#unlockBtn").onclick = () => openPro(st.pro ? "Pro is active on this device." : "");
-$("#licGo").onclick = activate; $("#proClose").onclick = () => $("#proDlg").close();
+$("#licGo").onclick = activate; $("#licKey").onkeydown = e => { if (e.key === "Enter") activate(); };
+$("#lkBackup").onclick = backup; $("#lkRestore").onchange = e => restoreFile(e.target.files[0]).finally(() => e.target.value = "");
 if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js"); navigator.serviceWorker.addEventListener("message", e => e.data?.odo && openOdo(e.data.odo)); }
 initExtras();
 Promise.all([fetch("schedules.json").then(r => r.json()), fetch("parts.json").then(r => r.json()).catch(() => PARTS)]).then(([j, p]) => { DATA = j; PARTS = p; fillModels(); render(); pushToSW(); regSync();
