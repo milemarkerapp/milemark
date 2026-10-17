@@ -54,9 +54,10 @@ function status(v, i, e) {
   const due = L ? (i.first && v.duty !== "s" && L.odo >= i.first - 5000 ? L.odo + i.then : L.odo + n) : nextAfter(v, i, v.startOdo);
   const win = Math.max(500, n * 0.1);
   let s = e - due > win ? "over" : due - e <= win ? "now" : "next";
-  if (i.mo) { const ref = L ? new Date(L.date) : new Date(v.startAt); if ((Date.now() - ref) / DAY > i.mo * 30.4 && s === "next") s = L ? "now" : s; }
+  let tdue = false;
+  if (i.mo) { const ref = L ? new Date(L.date) : new Date(v.startAt); if ((Date.now() - ref) / DAY > i.mo * 30.4 && s === "next") { s = L ? "now" : s; tdue = !!L; } }
   const days = Math.round((due - e) / v.rate);
-  return { ...i, n, due, s, L, days, date: new Date(Date.now() + Math.max(0, days) * DAY) };
+  return { ...i, n, due, s, L, tdue, win, days, date: new Date(Date.now() + Math.max(0, days) * DAY) };
 }
 function allStatus(v) { const e = est(v); return schedule(v).items.map(i => status(v, i, e)).sort((a, b) => a.due - b.due); }
 
@@ -221,28 +222,29 @@ async function shareReport() {
 }
 
 // ---------- reminders ----------
-async function pushToSW() { // give the service worker a summary it can check in the background
-  if (!("caches" in window)) return;
-  const due = st.vehicles.flatMap(v => allStatus(v).map(x => ({ key: v.id + x.id + x.due, title: `${v.name || v.model}: ${x.name}`, at: Date.now() + Math.max(0, x.days) * DAY - (x.n * 0.05 / v.rate) * DAY })));
-  const c = await caches.open("mm-state"); await c.put("state", new Response(JSON.stringify({ due, notified: st.notified })));
+function summary() {
+  return { vehicles: st.vehicles.map(v => ({ id: v.id, name: v.name || `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim(), rate: v.rate, anchorOdo: v.anchorOdo, anchorAt: v.anchorAt,
+      items: allStatus(v).map(x => ({ id: x.id, name: x.name, due: x.due, win: x.win, tdue: x.tdue })) })),
+    odo: veh() ? { vid: veh().id, name: veh().name || veh().model, lastAt: Math.max(...veh().readings.map(r => r.at)) } : null };
+}
+async function pushToSW() { // give the service worker what it needs to check in the background
+  if (!("caches" in window) || !DATA) return;
+  const c = await caches.open("mm-state"); await c.put("state", new Response(JSON.stringify({ sum: summary(), notified: st.notified })));
 }
 async function notifyDue() {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
-  const reg = await navigator.serviceWorker?.ready; let changed = false;
-  for (const v of st.vehicles) for (const x of allStatus(v)) if (x.s !== "next") {
-    const k = v.id + x.id + x.due; if (st.notified[k] && Date.now() - st.notified[k] < 7 * DAY) continue;
-    st.notified[k] = Date.now(); changed = true;
-    const body = `${x.s === "over" ? "Overdue" : "Due now"} at ~${fmt(x.due)} mi (est. ${fmt(est(v))} mi). Tap to open MileMark.`;
-    reg ? reg.showNotification(`${v.name || v.model}: ${x.name}`, { body, icon: "icon-192.png", tag: k }) : new Notification(x.name, { body });
-  }
-  if (changed) save();
+  if (!("Notification" in window) || Notification.permission !== "granted" || !DATA) return;
+  try { const r = await (await caches.open("mm-state")).match("state"); if (r) { const o = (await r.json()).notified || {}; for (const k in o) st.notified[k] = Math.max(st.notified[k] || 0, o[k]); } } catch (e) {}
+  const reg = await navigator.serviceWorker?.ready, res = MMNotify.plan(summary(), st.notified, Date.now());
+  st.notified = res.notified; save();
+  for (const f of res.fire) { const o = { body: f.body, icon: "icon-192.png", tag: f.tag, data: f.odo ? { odo: f.odo } : {} };
+    reg ? reg.showNotification(f.title, o) : new Notification(f.title, o); }
 }
+async function regSync() { if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try { const reg = await navigator.serviceWorker?.ready; if (reg?.periodicSync) await reg.periodicSync.register("mm-check", { minInterval: 12 * 36e5 }); } catch (e) {} }
 async function enableNotif() {
   if (!("Notification" in window)) return alert("This browser does not support notifications. Use Add to calendar instead. On iPhone, add MileMark to your Home Screen first.");
   const p = await Notification.requestPermission();
-  if (p === "granted") { const reg = await navigator.serviceWorker?.ready;
-    try { if (reg?.periodicSync) await reg.periodicSync.register("mm-check", { minInterval: DAY }); } catch (e) {}
-    render(); } else alert("Notifications are blocked. You can still use Add to calendar.");
+  if (p === "granted") { await regSync(); render(); } else alert("Notifications are blocked. You can still use Add to calendar.");
 }
 function ics() {
   const v = veh(), S = allStatus(v), d = t => new Date(t).toISOString().slice(0, 10).replace(/-/g, "");
@@ -289,7 +291,8 @@ document.addEventListener("click", e => {
 $("#addVeh").onclick = () => (st.vehicles.length && !st.pro) ? openPro("Free covers one vehicle. Unlock Pro for unlimited vehicles.") : showForm();
 $("#editVeh").onclick = () => showForm(true); $("#saveVeh").onclick = saveVeh;
 $("#cancelVeh").onclick = () => { $("#formCard").classList.add("hidden"); render(); };
-$("#fixOdo").onclick = () => { clearProof(); $("#odoVal").value = est(veh()); $("#odoDlg").showModal(); };
+function openOdo(id) { if (id && st.vehicles.some(v => v.id === id)) { st.cur = id; save(); render(); } if (!veh()) return; clearProof(); $("#odoVal").value = est(veh()); if (!$("#odoDlg").open) $("#odoDlg").showModal(); $("#odoVal").focus(); $("#odoVal").select(); }
+$("#fixOdo").onclick = () => openOdo();
 $("#odoSave").onclick = () => { const n = $("#odoVal").value; if (n === "" || +n < 0) return alert("Enter the odometer."); correct(veh(), +n, takeProof("odoVal")); save(); render(); $("#odoDlg").close(); };
 $("#odoCancel").onclick = () => $("#odoDlg").close();
 $("#duty").onchange = e => { veh().duty = e.target.value; save(); render(); };
@@ -301,9 +304,10 @@ $("#csvBtn").onclick = csv; $("#reportBtn").onclick = openReport; $("#rClose").o
 $("#restore").onchange = e => restoreFile(e.target.files[0]).finally(() => e.target.value = "");
 $("#unlockBtn").onclick = () => openPro(st.pro ? "Pro is active on this device." : "");
 $("#licGo").onclick = activate; $("#proClose").onclick = () => $("#proDlg").close();
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+if ("serviceWorker" in navigator) { navigator.serviceWorker.register("sw.js"); navigator.serviceWorker.addEventListener("message", e => e.data?.odo && openOdo(e.data.odo)); }
 initExtras();
-Promise.all([fetch("schedules.json").then(r => r.json()), fetch("parts.json").then(r => r.json()).catch(() => PARTS)]).then(([j, p]) => { DATA = j; PARTS = p; fillModels(); render(); pushToSW();
+Promise.all([fetch("schedules.json").then(r => r.json()), fetch("parts.json").then(r => r.json()).catch(() => PARTS)]).then(([j, p]) => { DATA = j; PARTS = p; fillModels(); render(); pushToSW(); regSync();
+  const q = new URLSearchParams(location.search).get("odo"); if (q) { history.replaceState(null, "", location.pathname); openOdo(q); }
   setInterval(render, 60 * 60e3); document.addEventListener("visibilitychange", () => !document.hidden && render()); });
 
 ["#fModel", "#fYear"].forEach(k => $(k).addEventListener("change", () => fillEng($("#fEng").value)));

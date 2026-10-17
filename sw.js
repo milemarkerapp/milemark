@@ -1,4 +1,4 @@
-const C = "milemark-v18", OCR = "milemark-ocr-v1", FILES = ["scan.js", "./", "index.html", "styles.css", "app.js", "schedules.json", "parts.json", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png", "favicon-32.png", "favicon-16.png", "logo-64.png", "terms.html", "privacy.html", "help.html", "features.js"];
+const C = "milemark-v19", OCR = "milemark-ocr-v1", FILES = ["scan.js", "./", "index.html", "styles.css", "app.js", "schedules.json", "parts.json", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png", "favicon-32.png", "favicon-16.png", "logo-64.png", "terms.html", "privacy.html", "help.html", "features.js", "notify-core.js"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(C).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener("activate", e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => /^milemark-v\d+$/.test(k) && k !== C).map(k => caches.delete(k)))).then(() => clients.claim())));
 self.addEventListener("fetch", e => { if (e.request.method !== "GET" || !e.request.url.startsWith(self.location.origin)) return;
@@ -8,11 +8,13 @@ self.addEventListener("fetch", e => { if (e.request.method !== "GET" || !e.reque
   e.respondWith(fetch(e.request).then(r => { const cp = r.clone(); caches.open(C).then(c => c.put(e.request, cp)); return r; }).catch(() => caches.match(e.request))); });
 // Background check where the browser supports Periodic Background Sync (installed Chrome/Edge on Android/desktop).
 self.addEventListener("periodicsync", e => { if (e.tag === "mm-check") e.waitUntil(check()); });
+importScripts("notify-core.js");
 async function check() {
   const c = await caches.open("mm-state"), r = await c.match("state"); if (!r) return;
-  const s = await r.json(), seen = s.bg || {};
-  for (const d of s.due) if (d.at <= Date.now() && !seen[d.key] && !s.notified[d.key]) {
-    seen[d.key] = 1; await self.registration.showNotification(d.title, { body: "Coming due soon (estimated). Tap to open MileMark.", icon: "icon-192.png", tag: d.key }); }
-  s.bg = seen; await c.put("state", new Response(JSON.stringify(s)));
+  const s = await r.json(); if (!s.sum) return;
+  const res = MMNotify.plan(s.sum, s.notified || {}, Date.now());
+  await c.put("state", new Response(JSON.stringify({ sum: s.sum, notified: res.notified })));
+  for (const f of res.fire) await self.registration.showNotification(f.title, { body: f.body, icon: "icon-192.png", tag: f.tag, data: f.odo ? { odo: f.odo } : {} });
 }
-self.addEventListener("notificationclick", e => { e.notification.close(); e.waitUntil(clients.matchAll({ type: "window" }).then(w => w[0] ? w[0].focus() : clients.openWindow("./"))); });
+self.addEventListener("notificationclick", e => { e.notification.close(); const odo = e.notification.data?.odo;
+  e.waitUntil(clients.matchAll({ type: "window" }).then(w => { if (w[0]) { if (odo) w[0].postMessage({ odo }); return w[0].focus(); } return clients.openWindow(odo ? "./?odo=" + encodeURIComponent(odo) : "./"); })); });
