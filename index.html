@@ -28,11 +28,12 @@
 <section id="dash" class="hidden">
 <div class="card"><div class="row between"><div><h2 id="vTitle"></h2><div class="muted" id="vSys"></div></div><button id="editVeh" class="ghost sm">Edit</button></div>
 <div class="est"><div><span class="muted">Estimated odometer</span><b id="estOdo"></b><span class="muted" id="estInfo"></span></div><button id="fixOdo" class="ghost sm">Correct it</button></div>
-<div class="row wrap"><button id="notifBtn" class="ghost sm">Turn on reminders</button><button id="icsBtn" class="ghost sm">Add to calendar (.ics)</button><select id="duty" class="sm inl"><option value="n">Normal duty</option><option value="s">Severe duty</option></select></div></div>
+<div class="row wrap"><button id="repBtn" class="sm">Replaced a part</button><button id="notifBtn" class="ghost sm">Turn on reminders</button><button id="icsBtn" class="ghost sm">Add to calendar (.ics)</button><select id="duty" class="sm inl"><option value="n">Normal duty</option><option value="s">Severe duty</option></select></div></div>
 <div class="stats"><div class="stat over"><b id="cOver">0</b>Overdue</div><div class="stat now"><b id="cNow">0</b>Due now</div><div class="stat next"><b id="cNext">0</b>Next up</div></div>
 <div class="card"><div class="row between"><h2>Services</h2><button id="addCustom" class="ghost sm">+ Custom service</button></div><div id="items"></div></div>
 <div class="card"><details><summary><b>Parts & specs for this vehicle</b></summary><div id="vParts"></div></details></div>
 <div class="card"><h2>Timeline</h2><p class="muted">From your starting mileage to 30,000 miles past today.</p><div id="timeline"></div></div>
+<div class="card" id="compCard"><div class="row between"><h2>Completed</h2><div class="row"><select id="compFilter" class="sm inl" aria-label="Filter"></select><button id="compRep" class="sm">Replaced a part</button></div></div><div id="compSum" class="muted"></div><div id="completed"></div></div>
 <div class="card"><div class="row between"><h2>Service log</h2></div><div id="log"></div></div>
 <div class="card row wrap"><button id="reportBtn">Vehicle History Report</button><button id="printBtn" class="ghost">Print</button><button id="csvBtn" class="ghost">Export CSV</button><button id="jsonBtn" class="ghost">Back up (free)</button><label class="filebtn ghost">Restore backup<input id="restore" type="file" accept=".json,application/json" hidden></label><a class="btn ghost" href="help.html">Help</a></div>
 </section>
@@ -46,6 +47,18 @@
 <label>Notes<input id="doneNote"></label>
 <label>Receipt photo<input id="donePhoto" type="file" accept="image/*" capture="environment"></label>
 <div class="row"><button id="doneSave">Log it</button><button id="doneCancel" class="ghost">Cancel</button></div></dialog>
+<dialog id="repDlg"><h3>Replaced a part</h3>
+<label>What was replaced<select id="repItem"></select></label>
+<div id="repNew" class="hidden"><label>Name<input id="repName" placeholder="e.g. Alternator"></label>
+<div class="grid2"><label>Replace every … miles<input id="repMi2" type="number" min="0" inputmode="numeric"></label><label>and/or … months<input id="repMo" type="number" min="0" inputmode="numeric"></label></div></div>
+<div class="grid2"><label>Odometer<input id="repMi" type="number" inputmode="numeric"><button type="button" class="ghost sm scanbtn" data-scan="repMi" data-keep="1">Scan odometer</button></label><label>Date<input id="repDate" type="date"></label></div>
+<label>Parts<input id="repParts" placeholder="brand / part number"></label>
+<div class="grid2"><label>Cost<input id="repCost" type="number" step="0.01" inputmode="decimal" placeholder="$"></label><label>Done by<input id="repWho" list="whoList" placeholder="DIY or shop name"></label></div>
+<label>Receipt photo<input id="repPhoto" type="file" accept="image/*" capture="environment"></label>
+<label class="chk hidden" id="repRotRow"><input type="checkbox" id="repRot" checked> Restart tire rotation too</label>
+<div id="repNext" class="repnext"></div><div id="repMsg" class="muted"></div>
+<div class="row"><button id="repSave">Log it and reset</button><button id="repCancel" class="ghost">Cancel</button></div></dialog>
+<div id="toast" class="toast hidden"></div>
 <dialog id="ivDlg"><h3 id="ivTitle"></h3><p class="muted" id="ivFactory"></p>
 <label id="ivNameRow">Service name<input id="ivName" placeholder="e.g. Replace wiper blades"></label>
 <div class="grid2"><label>Every … miles<input id="ivMi" type="number" min="0" inputmode="numeric"></label><label>and/or every … months<input id="ivMo" type="number" min="0" inputmode="numeric"></label></div>
@@ -64,4 +77,4 @@
 <label class="chk"><input type="checkbox" id="scanKeep"> Keep photo as proof of mileage</label>
 <div class="row"><button id="scanUse">Use this</button><button id="scanRetake" class="ghost">Retake</button><button id="scanCancel" class="ghost">Cancel</button></div></dialog>
 <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
-<script src="notify-core.js"></script><script src="features.js"></script><script src="app.js"></script><script src="scan.js"></script></body></html>
+<script src="notify-core.js"></script><script src="features.js"></script><script src="app.js"></script><script src="replace.js"></script><script src="scan.js"></script></body></html>

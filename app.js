@@ -48,7 +48,7 @@ function nextAfter(v, i, odo) { // next scheduled mileage strictly after odo
   if (i.first && v.duty !== "s") { if (odo < i.first) return i.first; return i.first + Math.floor((odo - i.first) / i.then + 1) * i.then; }
   return Math.floor(odo / n + 1) * n;
 }
-function lastDone(v, id) { return v.log.filter(l => l.item === id).sort((a, b) => b.odo - a.odo)[0]; }
+function lastDone(v, id) { return v.log.filter(l => l.item === id).sort((a, b) => b.odo - a.odo || b.at - a.at)[0]; }
 function status(v, i, e) {
   const L = lastDone(v, i.id), n = iv(v, i);
   const due = L ? (i.first && v.duty !== "s" && L.odo >= i.first - 5000 ? L.odo + i.then : L.odo + n) : nextAfter(v, i, v.startOdo);
@@ -57,7 +57,7 @@ function status(v, i, e) {
   let tdue = false;
   if (i.mo) { const ref = L ? new Date(L.date) : new Date(v.startAt); if ((Date.now() - ref) / DAY > i.mo * 30.4 && s === "next") { s = L ? "now" : s; tdue = !!L; } }
   const days = Math.round((due - e) / v.rate);
-  return { ...i, n, due, s, L, tdue, win, days, date: new Date(Date.now() + Math.max(0, days) * DAY) };
+  return { ...i, n, due, s, L, tdue, win, days, cyc: L && L.reset ? L.at : 0, date: new Date(Date.now() + Math.max(0, days) * DAY) };
 }
 function allStatus(v) { const e = est(v); return schedule(v).items.map(i => status(v, i, e)).sort((a, b) => a.due - b.due); }
 
@@ -110,11 +110,13 @@ function render() {
   $("#estOdo").textContent = fmt(e) + " mi"; $("#estInfo").textContent = ` · ~${Math.round(v.rate)} mi/day${v.readings.length > 1 ? " (learned)" : " (default)"}`;
   const c = k => S.filter(x => x.s === k).length; $("#cOver").textContent = c("over"); $("#cNow").textContent = c("now"); $("#cNext").textContent = Math.min(3, c("next"));
   const lbl = { over: "Overdue", now: "Due now", next: "Upcoming" };
-  $("#items").innerHTML = S.map(x => `<div class="item"><div><b>${esc(x.name)}</b>${x.note ? `<div class="muted">${esc(x.note)}</div>` : ""}<div class="mi">${x.timeOnly ? `Every ${x.mo} mo (≈${fmt(x.n)} mi at your pace)` : `Every ${fmt(x.n)} mi${x.mo ? ` or ${x.mo} mo` : ""}`}${x.edited ? " (your interval)" : ""}${x.custom ? " (custom)" : ""} · due at ${fmt(x.due)} mi ${x.s === "next" ? `· ~${x.date.toLocaleDateString(undefined, { month: "short", year: "numeric" })}` : x.s === "over" ? `· ${fmt(e - x.due)} mi over` : ""}${x.L ? `<br>Last done ${fmt(x.L.odo)} mi` : ""}${srcLine(v, x)}</div>${partsHTML(v, x.id)}</div><div style="text-align:right"><span class="tag t-${x.s}">${lbl[x.s]}</span><br><br><button class="done1" data-done="${x.id}">✓ Done</button><br><button class="link" data-iv="${x.id}">Edit interval</button></div></div>`).join("");
-  const sc = schedule(v); $("#items").innerHTML += sc.chk.length ? `<div class="chk"><b>Check your owner's manual</b><p class="muted">${sc.unverified ? "We don't have the official manual for this model and year on file, so we don't show intervals for these." : v.duty === "s" ? "The official guide gives no severe-use interval for these." : "The official guide lists these only for special operating conditions, or we couldn't read an interval from it."}</p>${sc.chk.map(x => `<div class="item"><div><b>${esc(x.name)}</b>${x.note ? `<div class="muted">${esc(x.note)}</div>` : ""}<div class="mi">Interval: ${CHECK}</div></div><div style="text-align:right"><button class="ok" data-done="${x.id}">✓ Done</button></div></div>`).join("")}</div>` : "";
+  $("#items").innerHTML = S.map(x => `<div class="item"><div><b>${esc(x.name)}</b>${x.note ? `<div class="muted">${esc(x.note)}</div>` : ""}<div class="mi">${x.timeOnly ? `Every ${x.mo} mo (≈${fmt(x.n)} mi at your pace)` : `Every ${fmt(x.n)} mi${x.mo ? ` or ${x.mo} mo` : ""}`}${x.edited ? " (your interval)" : ""}${x.custom ? " (custom)" : ""} · due at ${fmt(x.due)} mi ${x.s === "next" ? `· ~${x.date.toLocaleDateString(undefined, { month: "short", year: "numeric" })}` : x.s === "over" ? `· ${fmt(e - x.due)} mi over` : ""}${x.L ? `<br>Last done ${fmt(x.L.odo)} mi` : ""}${srcLine(v, x)}</div>${partsHTML(v, x.id)}</div><div style="text-align:right"><span class="tag t-${x.s}">${lbl[x.s]}</span><br><br><button class="done1" data-done="${x.id}">✓ Done</button><br><button class="link" data-iv="${x.id}">Edit interval</button><br><button class="link" data-rep="${x.id}">Replaced</button></div></div>`).join("");
+  const sc = schedule(v); $("#items").innerHTML += sc.chk.length ? `<div class="chk"><b>Check your owner's manual</b><p class="muted">${sc.unverified ? "We don't have the official manual for this model and year on file, so we don't show intervals for these." : v.duty === "s" ? "The official guide gives no severe-use interval for these." : "The official guide lists these only for special operating conditions, or we couldn't read an interval from it."}</p>${sc.chk.map(x => `<div class="item"><div><b>${esc(x.name)}</b>${x.note ? `<div class="muted">${esc(x.note)}</div>` : ""}<div class="mi">Interval: ${CHECK}</div></div><div style="text-align:right"><button class="ok" data-done="${x.id}">✓ Done</button><br><button class="link" data-rep="${x.id}">Replaced</button></div></div>`).join("")}</div>` : "";
   // timeline
   const end = e + 30000, marks = {};
-  S.forEach(x => { let m = nextAfter(v, x, v.startOdo - 1), g = 0; while (m <= end && g++ < 200) { (marks[m] ||= []).push(x); m = nextAfter(v, x, m); } });
+  S.forEach(x => { let m = nextAfter(v, x, v.startOdo - 1), g = 0, r0 = resetOdo(v, x.id); // a replaced part restarts its own chain from the new mileage
+    while (m <= end && g++ < 200 && (r0 < 0 || m <= r0)) { (marks[m] ||= []).push(x); m = nextAfter(v, x, m); }
+    if (r0 >= 0) for (m = x.due, g = 0; m <= end && g++ < 200; m += iv(v, x)) (marks[m] ||= []).push(x); });
   const keys = Object.keys(marks).map(Number).sort((a, b) => a - b); let shown = false;
   $("#timeline").innerHTML = `<div class="tl"><div class="tlm done"><b>${fmt(v.startOdo)} mi</b> <span class="muted">start</span></div>` + keys.map(k => { let h = ""; if (!shown && k > e) { shown = true; h = `<div class="tlm today"><b>${fmt(e)} mi</b> <span class="muted">today (est.)</span></div>`; }
     const allDone = marks[k].every(x => v.log.some(l => l.item === x.id && Math.abs(l.odo - k) <= iv(v, x) * 0.5));
@@ -122,7 +124,7 @@ function render() {
   $("#log").innerHTML = v.log.length ? [...v.log].sort((a, b) => b.odo - a.odo).map((l, i) => `<div class="item"><div><b>${esc(itemName(v, l))}</b><div class="mi">${fmt(l.odo)} mi · ${l.date}${l.who ? " · " + esc(l.who) : ""}${l.cost != null ? " · $" + l.cost.toFixed(2) : ""}${l.parts ? "<br>Parts: " + esc(l.parts) : ""}${l.photo ? " · 📎 receipt" : ""}${l.mph ? " · 📷 odometer" : ""}${l.note ? " · " + esc(l.note) : ""}</div></div><div class="row"><button class="mv" data-edlog="${l.at}" title="Edit" aria-label="Edit entry">✎</button><button class="x" data-unlog="${l.at}" title="Delete">✕</button></div></div>`).join("") : '<p class="muted">Tap ✓ Done on any service to log it. Mileage fills in automatically.</p>';
   $("#vParts").innerHTML = vehPartsHTML(v);
   $("#notifBtn").textContent = "Notification" in window && Notification.permission === "granted" ? "Reminders on ✓" : "Turn on reminders";
-  notifyDue(); banners();
+  renderCompleted(v, S); notifyDue(); banners();
 }
 let doneItem, editAt = null, doneDirty = false;
 function openDone(id) {
@@ -188,23 +190,25 @@ async function delPhoto(k) { try { const db = await idb(); db.transaction("photo
 // ---------- Vehicle History Report ----------
 function compliance(v) {
   const e = est(v); let due = 0, ok = 0;
-  schedule(v).items.forEach(i => { const n = iv(v, i), win = Math.max(500, n * 0.1); let m = nextAfter(v, i, v.startOdo - 1), g = 0;
-    while (m <= e && g++ < 200) { due++; if (v.log.some(l => l.item === i.id && l.odo > m - n * 0.5 && l.odo <= m + win)) ok++; m = nextAfter(v, i, m); } });
+  schedule(v).items.forEach(i => { const n = iv(v, i), win = Math.max(500, n * 0.1), r0 = resetOdo(v, i.id), hit = m => v.log.some(l => l.item === i.id && l.odo > m - n * 0.5 && l.odo <= m + win);
+    let m = nextAfter(v, i, v.startOdo - 1), g = 0;
+    while (m <= e && g++ < 200) { const h = hit(m); if (r0 < 0 || m <= r0 ? (r0 < 0 || h) : false) { due++; if (h) ok++; } if (r0 >= 0 && m > r0) break; m = nextAfter(v, i, m); }
+    if (r0 >= 0) { const L = lastDone(v, i.id); for (m = L.odo + n, g = 0; m <= e && g++ < 200; m += n) { due++; if (hit(m)) ok++; } } }); // after a replacement, the schedule restarts from it
   return { due, ok };
 }
 async function openReport() {
-  const v = veh(), it = id => (schedule(v).items.find(x => x.id === id) || {}).name || (v.log.find(l => l.item === id) || {}).label || id, c = compliance(v);
+  const v = veh(), it = id => (schedule(v).items.find(x => x.id === id) || {}).name || (v.log.find(l => l.item === id) || {}).label || id, c = compliance(v), ST = allStatus(v);
   const logs = [...v.log].sort((a, b) => a.odo - b.odo), spent = logs.reduce((t, l) => t + (l.cost || 0), 0);
   const last = {}; logs.forEach(l => last[l.item] = l);
   const title = `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim();
   const rows = await Promise.all(logs.map(async (l, i) => { let img = ""; if (l.photo && st.pro) { const b = await getPhoto(l.at); if (b) img = `<img class="rthumb" src="${URL.createObjectURL(b)}" alt="receipt">`; }
     if (l.mph && st.pro) { const b = await getPhoto("m" + l.at); if (b) img += `<img class="rthumb" src="${URL.createObjectURL(b)}" alt="odometer photo">`; }
-    return `<tr class="${!st.pro && i >= 2 ? "blur" : ""}"><td>${l.date}</td><td>${fmt(l.odo)}</td><td><b>${esc(it(l.item))}</b>${l.parts ? `<br>${esc(l.parts)}` : ""}${l.note ? `<br><span class="muted">${esc(l.note)}</span>` : ""}${img}</td><td>${esc(l.who || "")}</td><td>${l.cost != null ? "$" + l.cost.toFixed(2) : ""}</td></tr>`; }));
+    return `<tr class="${!st.pro && i >= 2 ? "blur" : ""}"><td>${l.date}</td><td>${fmt(l.odo)}</td><td><b>${esc(it(l.item))}</b>${l.reset ? ' <span class="tag t-ok">Replaced</span>' : ""}${l.parts ? `<br>${esc(l.parts)}` : ""}${l.note ? `<br><span class="muted">${esc(l.note)}</span>` : ""}${img}</td><td>${esc(l.who || "")}</td><td>${l.cost != null ? "$" + l.cost.toFixed(2) : ""}</td></tr>`; }));
   const odoPics = st.pro ? (await Promise.all((v.readings || []).filter(r => r.photo).map(async r => { const b = await getPhoto("o" + r.at); return b ? `<div class="opic"><img class="rthumb" src="${URL.createObjectURL(b)}" alt="odometer photo"><span>${new Date(r.at).toLocaleDateString()} · ${fmt(r.odo)} mi</span></div>` : ""; }))).join("") : "";
   $("#rBody").innerHTML = `<h1>Vehicle History Report</h1><div class="muted">Generated ${new Date().toLocaleDateString()} with MileMark · owner-recorded maintenance log</div>
    <h2 style="margin-top:14px">${esc(title)}${v.name ? ` <span class="muted">(${esc(v.name)})</span>` : ""}</h2>
-   <div class="kpi"><div><b>${fmt(est(v))} mi</b>Current odometer (est.)</div><div><b>${c.ok} of ${c.due}</b>factory services done on time since ${fmt(v.startOdo)} mi</div><div><b>${logs.length}</b>services logged${spent ? ` · $${fmt(spent)} spent` : ""}</div></div>
-   <h3>Last service dates</h3><table><tr><th>Service</th><th>Last done</th><th>Odometer</th></tr>${Object.values(last).map(l => `<tr><td>${esc(it(l.item))}</td><td>${l.date}</td><td>${fmt(l.odo)}</td></tr>`).join("") || '<tr><td colspan="3" class="muted">No services logged yet.</td></tr>'}</table>
+   <div class="kpi"><div><b>${fmt(est(v))} mi</b>Current odometer (est.)</div><div><b>${c.ok} of ${c.due}</b>factory services done on time since ${fmt(v.startOdo)} mi</div><div><b>${logs.length}</b>services logged${spent ? ` · $${fmt(spent)} spent` : ""}</div>${logs.some(l => l.reset) ? `<div><b>${logs.filter(l => l.reset).length}</b>parts replaced</div>` : ""}</div>
+   <h3>Last service dates</h3><table><tr><th>Service</th><th>Last done</th><th>Odometer</th><th>Next due</th></tr>${Object.values(last).map(l => { const x = ST.find(s => s.id === l.item); return `<tr><td>${esc(it(l.item))}</td><td>${l.date}${l.reset ? " (replaced)" : ""}</td><td>${fmt(l.odo)}</td><td>${x ? fmt(x.due) + " mi" : ""}</td></tr>`; }).join("") || '<tr><td colspan="4" class="muted">No services logged yet.</td></tr>'}</table>
    <h3>Service history</h3><table><tr><th>Date</th><th>Miles</th><th>Service & parts</th><th>Done by</th><th>Cost</th></tr>${rows.join("")}</table>${odoPics ? `<h3>Odometer photos</h3><div class="opics">${odoPics}</div>` : ""}
    ${st.pro ? "" : `<div class="lock"><b>Preview.</b> Unlock Pro for the full report, receipt photos, print to PDF and sharing.<br><br><button onclick="openPro('')">Unlock Pro</button></div>`}
    <p class="muted" style="margin-top:16px">This report lists maintenance recorded by the owner in MileMark. MileMark does not verify entries. Schedules come from the manufacturer's official owner's manual, with the page cited; the owner's manual is the authority.</p>`;
@@ -224,7 +228,7 @@ async function shareReport() {
 // ---------- reminders ----------
 function summary() {
   return { vehicles: st.vehicles.map(v => ({ id: v.id, name: v.name || `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim(), rate: v.rate, anchorOdo: v.anchorOdo, anchorAt: v.anchorAt,
-      items: allStatus(v).map(x => ({ id: x.id, name: x.name, due: x.due, win: x.win, tdue: x.tdue })) })),
+      items: allStatus(v).map(x => ({ id: x.id, name: x.name, due: x.due, win: x.win, tdue: x.tdue, cyc: x.cyc })) })),
     odo: veh() ? { vid: veh().id, name: veh().name || veh().model, lastAt: Math.max(...veh().readings.map(r => r.at)) } : null };
 }
 async function pushToSW() { // give the service worker what it needs to check in the background
@@ -270,10 +274,10 @@ async function activate() {
 }
 function needPro() { if (st.pro) return false; openPro("Export is part of Pro."); return true; }
 function csv() {
-  if (needPro()) return; const rows = [["Vehicle", "Service", "Interval (mi)", "Next due (mi)", "Status", "Last done (mi)"]];
-  st.vehicles.forEach(v => allStatus(v).forEach(x => rows.push([v.name || `${v.year} ${v.make} ${v.model}`, x.name, x.n, x.due, x.s, x.L?.odo || ""])));
-  rows.push([]); rows.push(["Vehicle", "Service log item", "Odometer", "Date", "Parts", "Cost", "Done by", "Notes"]);
-  st.vehicles.forEach(v => v.log.forEach(l => rows.push([v.name || v.model, itemName(v, l), l.odo, l.date, l.parts, l.cost, l.who, l.note])));
+  if (needPro()) return; const rows = [["Vehicle", "Service", "Interval (mi)", "Next due (mi)", "Status", "Last done (mi)", "Last replaced (date)"]];
+  st.vehicles.forEach(v => allStatus(v).forEach(x => rows.push([v.name || `${v.year} ${v.make} ${v.model}`, x.name, x.n, x.due, x.s, x.L?.odo || "", x.L?.reset ? x.L.date : ""])));
+  rows.push([]); rows.push(["Vehicle", "Service log item", "Odometer", "Date", "Parts", "Cost", "Done by", "Notes", "Type", "Next due (mi)", "Receipt photo"]);
+  st.vehicles.forEach(v => v.log.forEach(l => rows.push([v.name || v.model, itemName(v, l), l.odo, l.date, l.parts, l.cost, l.who, l.note, l.reset ? "Replaced (clock reset)" : "Done", nextDueFor(v, l) ?? "", l.photo ? "yes" : ""])));
   dl("milemark.csv", rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n"), "text/csv");
 }
 
@@ -285,7 +289,8 @@ document.addEventListener("click", e => {
   else if (d.up || d.down) moveVeh(d.up || d.down, d.up ? -1 : 1);
   else if (d.iv) openIv(d.iv);
   else if (d.edlog) openEditLog(+d.edlog);
-  else if (d.unlog) { const v = veh(); v.log = v.log.filter(l => String(l.at) !== d.unlog); delPhoto(+d.unlog); delPhoto("m" + d.unlog); save(); render(); }
+  else if (d.rep !== undefined) openRep(d.rep);
+  else if (d.unlog) { const v = veh(); v.log = v.log.filter(l => String(l.at) !== d.unlog && String(l.grp) !== d.unlog); delPhoto(+d.unlog); delPhoto("m" + d.unlog); save(); render(); }
   else if (t.closest(".veh")) { st.cur = t.closest(".veh").dataset.id; save(); render(); }
 });
 $("#addVeh").onclick = () => (st.vehicles.length && !st.pro) ? openPro("Free covers one vehicle. Unlock Pro for unlimited vehicles.") : showForm();

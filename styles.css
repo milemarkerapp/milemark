@@ -47,3 +47,9 @@ dialog{border:0;border-radius:14px;max-width:420px;width:92%}dialog::backdrop{ba
 @media print{.scanbtn{display:none!important}}
 .opics{display:flex;flex-wrap:wrap;gap:12px}.opic{font-size:.8rem;color:#475569}.opic img{max-width:150px;max-height:110px}
 @media print{.opic img{max-width:150px}}
+
+.repnext{font-weight:700;color:#166534;background:#f0fdf4;border-radius:8px;padding:8px;margin:8px 0}.repnext:empty{display:none}
+.cmp{padding:8px 0;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:8px}.cmp:last-child{border:0}
+.cmp .nx{font-size:.8rem;color:#166534;margin-top:2px}.cmp .nx.old{color:#94a3b8}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 16px;border-radius:12px;z-index:50;max-width:90%;font-weight:600}
+#repDlg label.chk{display:flex}

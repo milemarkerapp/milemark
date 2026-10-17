@@ -10,7 +10,7 @@
     for (const k in n) if (now - n[k] > 150 * DAY) delete n[k];
     for (const v of sum.vehicles) { const e = estOf(v), nm = v.name;
       for (const x of v.items) {
-        const r = x.due - e, k = v.id + "|" + x.id + "|" + x.due + "|";
+        const r = x.due - e, k = v.id + "|" + x.id + "|" + x.due + "|" + (x.cyc ? x.cyc + "|" : ""); // a part reset adds its own stamp, so it always starts a fresh cycle
         const L = -r > x.win ? 4 : (r <= 0 || x.tdue) ? 3 : r <= 100 ? 2 : r <= 500 ? 1 : 0;
         if (!L) continue;
         const names = ["", "l500", "l100", "due", "over"];
