@@ -36,7 +36,7 @@ function schedule(v) { // factory schedule + the owner's interval edits + custom
   const b = baseSchedule(v), over = v.over || {}, mi = mo => Math.max(100, Math.round(v.rate * mo * 30.4));
   const all = b.items.map(i => { const o = over[i.id]; if (!o) return i; const n = o.n || (o.mo ? mi(o.mo) : i.n);
     return { ...i, n, s: n, mo: o.mo ?? i.mo, first: undefined, then: undefined, edited: true, timeOnly: !o.n && !!o.mo }; })
-    .concat((v.custom || []).map(c => ({ id: c.id, name: c.name, n: c.n || mi(c.mo), s: c.n || mi(c.mo), mo: c.mo || undefined, note: c.note || "", custom: true, timeOnly: !c.n })));
+    .concat((v.custom || []).map(c => ({ id: c.id, name: c.name, n: c.n || mi(c.mo), s: c.n || mi(c.mo), mo: c.mo || undefined, note: c.note || "", custom: true, tire: !!c.tire, base: c.base, timeOnly: !c.n })));
   const has = i => (v.duty === "s" ? i.s : i.n) != null;
   return { system: b.system, src: b.src, unverified: b.unverified, items: all.filter(has), chk: all.filter(i => !has(i)) };
 }
@@ -51,7 +51,8 @@ function nextAfter(v, i, odo) { // next scheduled mileage strictly after odo
 function lastDone(v, id) { return v.log.filter(l => l.item === id).sort((a, b) => b.odo - a.odo || b.at - a.at)[0]; }
 function status(v, i, e) {
   const L = lastDone(v, i.id), n = iv(v, i);
-  const due = L ? (i.first && v.duty !== "s" && L.odo >= i.first - 5000 ? L.odo + i.then : L.odo + n) : nextAfter(v, i, v.startOdo);
+  let due = L ? (i.first && v.duty !== "s" && L.odo >= i.first - 5000 ? L.odo + i.then : L.odo + n) : nextAfter(v, i, v.startOdo);
+  if (i.tire) { const b = L ? L.odo : i.base; due = b + n + tireOff(v, i.id, b, e); } // a tire set only wears while it is on the car
   const win = Math.max(500, n * 0.1);
   let s = e - due > win ? "over" : due - e <= win ? "now" : "next";
   let tdue = false;
@@ -83,7 +84,7 @@ function saveVeh() {
   if (!make) return alert("Pick a make and model.");
   if (!$("#fCur").value || cur < 0) return alert("Enter your current odometer.");
   const id = $("#saveVeh").dataset.edit, rate = +$("#fRate").value || 0, pb = takeProof("fCur"), now = Date.now();
-  if (id) { const v = veh(); Object.assign(v, { make, model, year: $("#fYear").value, name: $("#fName").value, duty: $("#fDuty").value, engine: $("#fEng").value }); if (rate) v.rate = rate; if (cur !== est(v)) correct(v, cur, pb); }
+  if (id) { const v = veh(); Object.assign(v, { make, model, year: $("#fYear").value, name: $("#fName").value, duty: $("#fDuty").value, engine: $("#fEng").value }); if (rate) v.rate = rate; if (cur !== est(v)) { if (!lowerOk(v, cur)) return; correct(v, cur, pb); } }
   else {
     if (st.vehicles.length >= 1 && !st.pro) return openPro("Free covers one vehicle. Unlock Pro for unlimited vehicles.");
     const v = { id: Date.now().toString(36), make, model, year: $("#fYear").value, name: $("#fName").value, duty: $("#fDuty").value, engine: $("#fEng").value, rate: rate || DEFAULT_RATE, rateSet: !!rate,
@@ -101,20 +102,20 @@ function correct(v, odo, proof) { // refine the miles/day rate from real reading
 }
 function render() {
   $("#unlockBtn").textContent = st.pro ? "Pro ✓" : "Unlock Pro";
-  $("#vehList").innerHTML = st.vehicles.length ? st.vehicles.map(v => `<div class="veh ${v.id === st.cur ? "on" : ""}" data-id="${v.id}"><div><b>${esc(v.name || `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim())}</b><div class="muted">~${fmt(est(v))} mi</div></div><div class="row"><button class="mv" data-up="${v.id}" title="Move up" aria-label="Move up">↑</button><button class="mv" data-down="${v.id}" title="Move down" aria-label="Move down">↓</button><button class="x" data-del="${v.id}" title="Remove">✕</button></div></div>`).join("") : '<p class="muted">No vehicle yet. Tap + Add to start.</p>';
+  $("#vehList").innerHTML = st.vehicles.length ? st.vehicles.map(v => `<div class="veh ${v.id === st.cur ? "on" : ""}" data-id="${v.id}"><div><b>${esc(v.name || `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim())}</b><div class="muted">~${fmt(est(v))} mi${vBadge(v)}</div></div><div class="row"><button class="mv" data-up="${v.id}" title="Move up" aria-label="Move up">↑</button><button class="mv" data-down="${v.id}" title="Move down" aria-label="Move down">↓</button><button class="x" data-del="${v.id}" title="Remove">✕</button></div></div>`).join("") : '<p class="muted">No vehicle yet. Tap + Add to start.</p>';
   const v = veh(); if (!v) { $("#dash").classList.add("hidden"); if (!st.vehicles.length) showForm(); return; }
   $("#dash").classList.remove("hidden");
   const S = allStatus(v), e = est(v);
   $("#vTitle").textContent = v.name || `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim();
-  $("#vSys").textContent = schedule(v).system; $("#duty").value = v.duty;
+  $("#vSys").textContent = schedule(v).system; $("#vBadge").innerHTML = vBadge(v); $("#duty").value = v.duty;
   $("#estOdo").textContent = fmt(e) + " mi"; $("#estInfo").textContent = ` · ~${Math.round(v.rate)} mi/day${v.readings.length > 1 ? " (learned)" : " (default)"}`;
   const c = k => S.filter(x => x.s === k).length; $("#cOver").textContent = c("over"); $("#cNow").textContent = c("now"); $("#cNext").textContent = Math.min(3, c("next"));
   const lbl = { over: "Overdue", now: "Due now", next: "Upcoming" };
-  $("#items").innerHTML = S.map(x => `<div class="item"><div><b>${esc(x.name)}</b>${x.note ? `<div class="muted">${esc(x.note)}</div>` : ""}<div class="mi">${x.timeOnly ? `Every ${x.mo} mo (≈${fmt(x.n)} mi at your pace)` : `Every ${fmt(x.n)} mi${x.mo ? ` or ${x.mo} mo` : ""}`}${x.edited ? " (your interval)" : ""}${x.custom ? " (custom)" : ""} · due at ${fmt(x.due)} mi ${x.s === "next" ? `· ~${x.date.toLocaleDateString(undefined, { month: "short", year: "numeric" })}` : x.s === "over" ? `· ${fmt(e - x.due)} mi over` : ""}${x.L ? `<br>Last done ${fmt(x.L.odo)} mi` : ""}${srcLine(v, x)}</div>${partsHTML(v, x.id)}</div><div style="text-align:right"><span class="tag t-${x.s}">${lbl[x.s]}</span><br><br><button class="done1" data-done="${x.id}">✓ Done</button><br><button class="link" data-iv="${x.id}">Edit interval</button><br><button class="link" data-rep="${x.id}">Replaced</button></div></div>`).join("");
+  $("#items").innerHTML = S.map(x => `<div class="item"><div><b>${esc(x.name)}</b>${x.note ? `<div class="muted">${esc(x.note)}</div>` : ""}<div class="mi">${x.timeOnly ? `Every ${x.mo} mo (≈${fmt(x.n)} mi at your pace)` : `Every ${fmt(x.n)} mi${x.mo ? ` or ${x.mo} mo` : ""}`}${x.edited ? " (your interval)" : ""}${x.tire ? (tireMounted(v) === x.id ? " (on the car)" : " (in storage)") : x.custom ? " (custom)" : ""} · due at ${fmt(x.due)} mi ${x.s === "next" ? `· ~${x.date.toLocaleDateString(undefined, { month: "short", year: "numeric" })}` : x.s === "over" ? `· ${fmt(e - x.due)} mi over` : ""}${x.L ? `<br>Last done ${fmt(x.L.odo)} mi` : ""}${srcLine(v, x)}</div>${partsHTML(v, x.id)}</div><div style="text-align:right"><span class="tag t-${x.s}">${lbl[x.s]}</span><br><br><button class="done1" data-done="${x.id}">✓ Done</button><br><button class="link" data-iv="${x.id}">Edit interval</button><br><button class="link" data-rep="${x.id}">Replaced</button></div></div>`).join("");
   const sc = schedule(v); $("#items").innerHTML += sc.chk.length ? `<div class="chk"><b>Check your owner's manual</b><p class="muted">${sc.unverified ? "We don't have the official manual for this model and year on file, so we don't show intervals for these." : v.duty === "s" ? "The official guide gives no severe-use interval for these." : "The official guide lists these only for special operating conditions, or we couldn't read an interval from it."}</p>${sc.chk.map(x => `<div class="item"><div><b>${esc(x.name)}</b>${x.note ? `<div class="muted">${esc(x.note)}</div>` : ""}<div class="mi">Interval: ${CHECK}</div></div><div style="text-align:right"><button class="ok" data-done="${x.id}">✓ Done</button><br><button class="link" data-rep="${x.id}">Replaced</button></div></div>`).join("")}</div>` : "";
   // timeline
   const end = e + 30000, marks = {};
-  S.forEach(x => { let m = nextAfter(v, x, v.startOdo - 1), g = 0, r0 = resetOdo(v, x.id); // a replaced part restarts its own chain from the new mileage
+  S.forEach(x => { if (x.tire) { if (tireMounted(v) === x.id) (marks[x.due] ||= []).push(x); return; } let m = nextAfter(v, x, v.startOdo - 1), g = 0, r0 = resetOdo(v, x.id); // a replaced part restarts its own chain from the new mileage
     while (m <= end && g++ < 200 && (r0 < 0 || m <= r0)) { (marks[m] ||= []).push(x); m = nextAfter(v, x, m); }
     if (r0 >= 0) for (m = x.due, g = 0; m <= end && g++ < 200; m += iv(v, x)) (marks[m] ||= []).push(x); });
   const keys = Object.keys(marks).map(Number).sort((a, b) => a - b); let shown = false;
@@ -124,15 +125,15 @@ function render() {
   $("#log").innerHTML = v.log.length ? [...v.log].sort((a, b) => b.odo - a.odo).map((l, i) => `<div class="item"><div><b>${esc(itemName(v, l))}</b><div class="mi">${fmt(l.odo)} mi · ${l.date}${l.who ? " · " + esc(l.who) : ""}${l.cost != null ? " · $" + l.cost.toFixed(2) : ""}${l.parts ? "<br>Parts: " + esc(l.parts) : ""}${l.photo ? " · 📎 receipt" : ""}${l.mph ? " · 📷 odometer" : ""}${l.note ? " · " + esc(l.note) : ""}</div></div><div class="row"><button class="mv" data-edlog="${l.at}" title="Edit" aria-label="Edit entry">✎</button><button class="x" data-unlog="${l.at}" title="Delete">✕</button></div></div>`).join("") : '<p class="muted">Tap ✓ Done on any service to log it. Mileage fills in automatically.</p>';
   $("#vParts").innerHTML = vehPartsHTML(v);
   $("#notifBtn").textContent = "Notification" in window && Notification.permission === "granted" ? "Reminders on ✓" : "Turn on reminders";
-  renderCompleted(v, S); notifyDue(); banners();
+  renderCompleted(v, S); renderMore(v); notifyDue(); banners();
 }
 let doneItem, editAt = null, doneDirty = false;
-function openDone(id) {
+function openDone(id) { $("#donePickRow").classList.add("hidden");
   const v = veh(), sc = schedule(v), it = sc.items.concat(sc.chk).find(x => x.id === id); doneItem = id; editAt = null; doneDirty = false; $("#doneSave").textContent = "Log it";
   $("#doneTitle").textContent = it.name; $("#doneMi").value = est(v); $("#doneDate").value = today(); $("#doneNote").value = ""; $("#doneParts").value = partGuess(v, id); $("#doneCost").value = ""; $("#doneWho").value = lastWho(); $("#donePhoto").value = ""; clearProof();
   $("#doneDlg").showModal();
 }
-function openEditLog(at) {
+function openEditLog(at) { $("#donePickRow").classList.add("hidden");
   const v = veh(), l = v.log.find(x => x.at === at); if (!l) return; editAt = at; doneItem = l.item; doneDirty = false;
   $("#doneTitle").textContent = "Edit: " + itemName(v, l); $("#doneSave").textContent = "Save changes";
   $("#doneMi").value = l.odo; $("#doneDate").value = l.date; $("#doneNote").value = l.note || ""; $("#doneParts").value = l.parts || ""; $("#doneCost").value = l.cost ?? ""; $("#doneWho").value = l.who || ""; $("#donePhoto").value = ""; clearProof();
@@ -144,10 +145,11 @@ function logDone() {
   if (editAt) { const l = v.log.find(x => x.at === editAt);
     Object.assign(l, { odo, date: $("#doneDate").value || l.date, note: $("#doneNote").value, parts: $("#doneParts").value, cost: $("#doneCost").value !== "" ? +$("#doneCost").value : null, who: $("#doneWho").value });
     if (f) { l.photo = true; savePhoto(l.at, f); } if (pb) { l.mph = true; savePhoto("m" + l.at, pb); } editAt = null; closeDone(true); save(); render(); return; }
+  if (($("#doneDate").value || today()) === today() && odo < est(v) - 50 && !lowerOk(v, odo)) return;
   const at = Date.now();
   v.log.push({ item: doneItem, odo, date: $("#doneDate").value || today(), note: $("#doneNote").value, parts: $("#doneParts").value, cost: $("#doneCost").value ? +$("#doneCost").value : null, who: $("#doneWho").value, photo: !!f, mph: !!pb, at });
   if (f) savePhoto(at, f); if (pb) savePhoto("m" + at, pb);
-  if (odo > est(v) + 50 || odo < est(v) - 50) correct(v, odo); // a logged mileage is a real reading
+  if (($("#doneDate").value || today()) === today() && (odo > est(v) + 50 || odo < est(v) - 50)) correct(v, odo); // a logged mileage is a real reading only when it is from today; a backdated entry never moves the odometer
   closeDone(true); save(); render();
 }
 
@@ -190,7 +192,7 @@ async function delPhoto(k) { try { const db = await idb(); db.transaction("photo
 // ---------- Vehicle History Report ----------
 function compliance(v) {
   const e = est(v); let due = 0, ok = 0;
-  schedule(v).items.forEach(i => { const n = iv(v, i), win = Math.max(500, n * 0.1), r0 = resetOdo(v, i.id), hit = m => v.log.some(l => l.item === i.id && l.odo > m - n * 0.5 && l.odo <= m + win);
+  schedule(v).items.filter(i => !i.tire).forEach(i => { const n = iv(v, i), win = Math.max(500, n * 0.1), r0 = resetOdo(v, i.id), hit = m => v.log.some(l => l.item === i.id && l.odo > m - n * 0.5 && l.odo <= m + win);
     let m = nextAfter(v, i, v.startOdo - 1), g = 0;
     while (m <= e && g++ < 200) { const h = hit(m); if (r0 < 0 || m <= r0 ? (r0 < 0 || h) : false) { due++; if (h) ok++; } if (r0 >= 0 && m > r0) break; m = nextAfter(v, i, m); }
     if (r0 >= 0) { const L = lastDone(v, i.id); for (m = L.odo + n, g = 0; m <= e && g++ < 200; m += n) { due++; if (hit(m)) ok++; } } }); // after a replacement, the schedule restarts from it
@@ -228,7 +230,9 @@ async function shareReport() {
 // ---------- reminders ----------
 function summary() {
   return { vehicles: st.vehicles.map(v => ({ id: v.id, name: v.name || `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim(), rate: v.rate, anchorOdo: v.anchorOdo, anchorAt: v.anchorAt,
-      items: allStatus(v).map(x => ({ id: x.id, name: x.name, due: x.due, win: x.win, tdue: x.tdue, cyc: x.cyc })) })),
+      items: allStatus(v).filter(x => !x.tire || tireMounted(v) === x.id).map(x => ({ id: x.id, name: x.name, due: x.due, win: x.win, tdue: x.tdue, cyc: x.cyc })) })),
+    renew: st.vehicles.flatMap(v => (v.renew || []).map(r => ({ vid: v.id, id: r.id, label: renLabel(r), date: r.date, mi: r.mi || 0 }))),
+    rq: st.vehicles.map(v => ({ vid: v.id, name: v.name || `${v.year || ""} ${v.make} ${v.model}`.trim(), q: recallQ(v) })).filter(x => x.q),
     odo: veh() ? { vid: veh().id, name: veh().name || veh().model, lastAt: Math.max(...veh().readings.map(r => r.at)) } : null };
 }
 async function pushToSW() { // give the service worker what it needs to check in the background
@@ -278,6 +282,7 @@ function csv() {
   st.vehicles.forEach(v => allStatus(v).forEach(x => rows.push([v.name || `${v.year} ${v.make} ${v.model}`, x.name, x.n, x.due, x.s, x.L?.odo || "", x.L?.reset ? x.L.date : ""])));
   rows.push([]); rows.push(["Vehicle", "Service log item", "Odometer", "Date", "Parts", "Cost", "Done by", "Notes", "Type", "Next due (mi)", "Receipt photo"]);
   st.vehicles.forEach(v => v.log.forEach(l => rows.push([v.name || v.model, itemName(v, l), l.odo, l.date, l.parts, l.cost, l.who, l.note, l.reset ? "Replaced (clock reset)" : "Done", nextDueFor(v, l) ?? "", l.photo ? "yes" : ""])));
+  moreCsv(rows);
   dl("milemark.csv", rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n"), "text/csv");
 }
 
@@ -298,7 +303,7 @@ $("#editVeh").onclick = () => showForm(true); $("#saveVeh").onclick = saveVeh;
 $("#cancelVeh").onclick = () => { $("#formCard").classList.add("hidden"); render(); };
 function openOdo(id) { if (id && st.vehicles.some(v => v.id === id)) { st.cur = id; save(); render(); } if (!veh()) return; clearProof(); $("#odoVal").value = est(veh()); if (!$("#odoDlg").open) $("#odoDlg").showModal(); $("#odoVal").focus(); $("#odoVal").select(); }
 $("#fixOdo").onclick = () => openOdo();
-$("#odoSave").onclick = () => { const n = $("#odoVal").value; if (n === "" || +n < 0) return alert("Enter the odometer."); correct(veh(), +n, takeProof("odoVal")); save(); render(); $("#odoDlg").close(); };
+$("#odoSave").onclick = () => { const n = $("#odoVal").value; if (n === "" || +n < 0) return alert("Enter the odometer."); const cv = veh(); if (!lowerOk(cv, +n)) return; correct(cv, +n, takeProof("odoVal")); save(); render(); $("#odoDlg").close(); };
 $("#odoCancel").onclick = () => $("#odoDlg").close();
 $("#duty").onchange = e => { veh().duty = e.target.value; save(); render(); };
 $("#doneSave").onclick = logDone; $("#doneCancel").onclick = () => closeDone();

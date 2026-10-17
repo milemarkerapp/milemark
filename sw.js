@@ -1,4 +1,4 @@
-const C = "milemark-v21", OCR = "milemark-ocr-v1", FILES = ["scan.js", "./", "index.html", "styles.css", "app.js", "schedules.json", "parts.json", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png", "favicon-32.png", "favicon-16.png", "logo-64.png", "terms.html", "privacy.html", "help.html", "features.js", "notify-core.js", "replace.js"];
+const C = "milemark-v22", OCR = "milemark-ocr-v1", FILES = ["scan.js", "./", "index.html", "styles.css", "app.js", "schedules.json", "parts.json", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png", "favicon-32.png", "favicon-16.png", "logo-64.png", "terms.html", "privacy.html", "help.html", "features.js", "notify-core.js", "replace.js", "more.js"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(C).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener("activate", e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => /^milemark-v\d+$/.test(k) && k !== C).map(k => caches.delete(k)))).then(() => clients.claim())));
 self.addEventListener("fetch", e => { if (e.request.method !== "GET" || !e.request.url.startsWith(self.location.origin)) return;
@@ -12,9 +12,12 @@ importScripts("notify-core.js");
 async function check() {
   const c = await caches.open("mm-state"), r = await c.match("state"); if (!r) return;
   const s = await r.json(); if (!s.sum) return;
-  const res = MMNotify.plan(s.sum, s.notified || {}, Date.now());
+  const res = MMNotify.plan(s.sum, s.notified || {}, Date.now()), fire = res.fire, now = Date.now();
+  for (const q of s.sum.rq || []) { const fk = "rcf|" + q.vid; if (now - (res.notified[fk] || 0) < 20 * 36e5) continue; res.notified[fk] = now; // recalls: public NHTSA data by make / model / year only
+    try { const j = await (await fetch(`https://api.nhtsa.gov/recalls/recallsByVehicle?make=${encodeURIComponent(q.q.make)}&model=${encodeURIComponent(q.q.model)}&modelYear=${q.q.year}`)).json(), ids = [...new Set((j.results || []).map(r => r.NHTSACampaignNumber))].map(id => ({ id, comp: (j.results.find(r => r.NHTSACampaignNumber === id) || {}).Component }));
+      fire.push(...MMNotify.recalls([{ vid: q.vid, name: q.name, ids }], res.notified, now)); } catch (e) {} }
   await c.put("state", new Response(JSON.stringify({ sum: s.sum, notified: res.notified })));
-  for (const f of res.fire) await self.registration.showNotification(f.title, { body: f.body, icon: "icon-192.png", tag: f.tag, data: f.odo ? { odo: f.odo } : {} });
+  for (const f of fire) await self.registration.showNotification(f.title, { body: f.body, icon: "icon-192.png", tag: f.tag, data: f.odo ? { odo: f.odo } : {} });
 }
 self.addEventListener("notificationclick", e => { e.notification.close(); const odo = e.notification.data?.odo;
   e.waitUntil(clients.matchAll({ type: "window" }).then(w => { if (w[0]) { if (odo) w[0].postMessage({ odo }); return w[0].focus(); } return clients.openWindow(odo ? "./?odo=" + encodeURIComponent(odo) : "./"); })); });

@@ -26,20 +26,21 @@
 <label id="fEngWrap" class="hidden">Engine / drivetrain (optional)<select id="fEng"></select></label><label>Driving conditions<select id="fDuty"><option value="n">Normal</option><option value="s">Severe (towing, short trips, dust, extreme heat or cold, stop-and-go)</option></select></label></details>
 <div class="row"><button id="saveVeh">Start reminders</button><button id="cancelVeh" class="ghost">Cancel</button></div></section>
 <section id="dash" class="hidden">
-<div class="card"><div class="row between"><div><h2 id="vTitle"></h2><div class="muted" id="vSys"></div></div><button id="editVeh" class="ghost sm">Edit</button></div>
+<div class="card"><div class="row between"><div><h2 id="vTitle"></h2><div id="vBadge"></div><div class="muted" id="vSys"></div></div><button id="editVeh" class="ghost sm">Edit</button></div>
 <div class="est"><div><span class="muted">Estimated odometer</span><b id="estOdo"></b><span class="muted" id="estInfo"></span></div><button id="fixOdo" class="ghost sm">Correct it</button></div>
 <div class="row wrap"><button id="repBtn" class="sm">Replaced a part</button><button id="notifBtn" class="ghost sm">Turn on reminders</button><button id="icsBtn" class="ghost sm">Add to calendar (.ics)</button><select id="duty" class="sm inl"><option value="n">Normal duty</option><option value="s">Severe duty</option></select></div></div>
 <div class="stats"><div class="stat over"><b id="cOver">0</b>Overdue</div><div class="stat now"><b id="cNow">0</b>Due now</div><div class="stat next"><b id="cNext">0</b>Next up</div></div>
-<div class="card"><div class="row between"><h2>Services</h2><button id="addCustom" class="ghost sm">+ Custom service</button></div><div id="items"></div></div>
+<div class="card"><div class="row between"><h2>Services</h2><div class="row"><button id="tireBtn" class="ghost sm">Tire sets</button><button id="addCustom" class="ghost sm">+ Custom service</button></div></div><div id="items"></div></div>
+<div class="card" id="renCard"><div class="row between"><h2>Renewals</h2><button id="renAdd" class="ghost sm">+ Add</button></div><div id="renList"></div></div>
 <div class="card"><details><summary><b>Parts & specs for this vehicle</b></summary><div id="vParts"></div></details></div>
 <div class="card"><h2>Timeline</h2><p class="muted">From your starting mileage to 30,000 miles past today.</p><div id="timeline"></div></div>
 <div class="card" id="compCard"><div class="row between"><h2>Completed</h2><div class="row"><select id="compFilter" class="sm inl" aria-label="Filter"></select><button id="compRep" class="sm">Replaced a part</button></div></div><div id="compSum" class="muted"></div><div id="completed"></div></div>
-<div class="card"><div class="row between"><h2>Service log</h2></div><div id="log"></div></div>
+<div class="card"><div class="row between"><h2>Service log</h2><button id="pastBtn" class="ghost sm">+ Past service</button></div><div id="log"></div></div>
 <div class="card row wrap"><button id="reportBtn">Vehicle History Report</button><button id="printBtn" class="ghost">Print</button><button id="csvBtn" class="ghost">Export CSV</button><button id="jsonBtn" class="ghost">Back up (free)</button><label class="filebtn ghost">Restore backup<input id="restore" type="file" accept=".json,application/json" hidden></label><a class="btn ghost" href="help.html">Help</a></div>
 </section>
 <p class="disclaimer">Intervals come from the manufacturer's official owner's manual or maintenance guide for your model year, with the manual and page cited. Pick your engine for exact values. <b>Your owner's manual and your vehicle's maintenance reminder are the authority.</b></p>
 </main>
-<dialog id="doneDlg"><h3 id="doneTitle"></h3><p class="muted">Everything here is optional. Mileage and parts are pre-filled.</p>
+<dialog id="doneDlg"><h3 id="doneTitle"></h3><label id="donePickRow" class="hidden">Service<select id="donePick"></select></label><p class="muted">Everything here is optional. Mileage and parts are pre-filled.</p>
 <div class="grid2"><label>Odometer<input id="doneMi" type="number" inputmode="numeric"><button type="button" class="ghost sm scanbtn" data-scan="doneMi" data-keep="1">Scan odometer</button></label><label>Date<input id="doneDate" type="date"></label></div>
 <label>Parts used<input id="doneParts" placeholder="brand / part number"></label>
 <div class="grid2"><label>Cost<input id="doneCost" type="number" step="0.01" inputmode="decimal" placeholder="$"></label><label>Done by<input id="doneWho" list="whoList" placeholder="DIY or shop name"></label></div>
@@ -59,6 +60,20 @@
 <div id="repNext" class="repnext"></div><div id="repMsg" class="muted"></div>
 <div class="row"><button id="repSave">Log it and reset</button><button id="repCancel" class="ghost">Cancel</button></div></dialog>
 <div id="toast" class="toast hidden"></div>
+<dialog id="renDlg"><h3 id="renTitle">Renewal</h3>
+<label>What<select id="renType"><option value="reg">Registration</option><option value="ins">Insurance</option><option value="insp">Inspection</option><option value="warr">Warranty</option></select></label>
+<div class="grid2"><label>Ends on<input id="renDate" type="date"></label><label>Repeats every … months<input id="renEvery" type="number" min="0" inputmode="numeric"></label></div>
+<label id="renMiRow" class="hidden">Warranty also ends at … miles (optional)<input id="renMi" type="number" min="0" inputmode="numeric"></label>
+<div id="renMsg" class="muted"></div>
+<div class="row wrap"><button id="renSave">Save</button><button id="renCancel" class="ghost">Cancel</button><button id="renDel" class="ghost">Delete</button></div></dialog>
+<dialog id="rcDlg"><h3>Recalls</h3><div id="rcBody"></div>
+<div class="row wrap"><button id="rcRefresh" class="ghost sm">Check again</button><a class="btn ghost sm" href="https://www.nhtsa.gov/recalls" target="_blank" rel="noopener">Check by VIN at NHTSA</a><button id="rcClose" class="ghost sm">Close</button></div></dialog>
+<dialog id="tireDlg"><h3>Tire sets</h3><div id="tireList"></div>
+<h4 style="margin:12px 0 0">Add a set</h4>
+<label>Name<input id="tsName" placeholder="Summer"></label>
+<div class="grid2"><label>Replace every … miles<input id="tsMi" type="number" min="0" inputmode="numeric" value="50000"></label><label>and/or … months<input id="tsMo" type="number" min="0" inputmode="numeric" value="72"></label></div>
+<label class="chk"><input type="checkbox" id="tsMount"> On the car now</label><div id="tsMsg" class="muted"></div>
+<div class="row"><button id="tsAdd">Add set</button><button id="tsClose" class="ghost">Close</button></div></dialog>
 <dialog id="ivDlg"><h3 id="ivTitle"></h3><p class="muted" id="ivFactory"></p>
 <label id="ivNameRow">Service name<input id="ivName" placeholder="e.g. Replace wiper blades"></label>
 <div class="grid2"><label>Every … miles<input id="ivMi" type="number" min="0" inputmode="numeric"></label><label>and/or every … months<input id="ivMo" type="number" min="0" inputmode="numeric"></label></div>
@@ -77,4 +92,4 @@
 <label class="chk"><input type="checkbox" id="scanKeep"> Keep photo as proof of mileage</label>
 <div class="row"><button id="scanUse">Use this</button><button id="scanRetake" class="ghost">Retake</button><button id="scanCancel" class="ghost">Cancel</button></div></dialog>
 <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
-<script src="notify-core.js"></script><script src="features.js"></script><script src="app.js"></script><script src="replace.js"></script><script src="scan.js"></script></body></html>
+<script src="notify-core.js"></script><script src="features.js"></script><script src="app.js"></script><script src="replace.js"></script><script src="more.js"></script><script src="scan.js"></script></body></html>

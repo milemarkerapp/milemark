@@ -76,6 +76,7 @@ function repSave() {
   const v = veh(), k = repKind(v), sc = schedule(v), odo = Math.round(+$("#repMi").value), date = $("#repDate").value || today();
   const mi = Math.round(+$("#repMi2").value || 0), mo = Math.round(+$("#repMo").value || 0), msg = t => $("#repMsg").textContent = t;
   if (!($("#repMi").value !== "") || odo < 0 || odo > 2000000) return msg("Enter the odometer.");
+  if (date === today() && odo < est(v) - 50 && !lowerOk(v, odo)) return;
   let id, name;
   if (k.kind === "new" || k.kind === "common") {
     name = k.kind === "new" ? $("#repName").value.trim() : k.c.name;
