@@ -43,6 +43,7 @@ function repForm() {
   $("#repName").parentElement.classList.toggle("hidden", k.kind !== "new");
   if (k.kind === "common" && $("#repNew").dataset.cid !== k.c.id) { $("#repMi2").value = k.c.n || ""; $("#repMo").value = k.c.mo || ""; $("#repNew").dataset.cid = k.c.id; }
   if (k.kind !== "common") $("#repNew").dataset.cid = "";
+  $("#repTireNote").classList.toggle("hidden", !(k.kind === "common" && k.c.id === "tires"));
   const tires = k.kind === "common" ? k.c.id === "tires" : k.kind !== "new" && (k.it?.id === "tires");
   $("#repRotRow").classList.toggle("hidden", !(tires && [...sc.items, ...sc.chk].some(x => x.id === "rot")));
   repPreview();

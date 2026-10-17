@@ -59,7 +59,7 @@ function recallRender() { const v = veh(), r = v.recalls || {}, L = r.items || [
   $("#rcBody").innerHTML = (L.length ? L.map(x => { const d = (r.done || {})[x.id];
     return `<div class="item" style="${d ? "opacity:.55" : ""}"><div><b>${esc(x.comp)}</b>${x.park ? ' <span class="tag t-over">Do not drive</span>' : ""}<div class="muted">${esc(x.date)} · ${esc(x.id)}</div><div class="mi">${esc(x.sum)}</div>${x.rem ? `<div class="mi"><b>Fix:</b> ${esc(x.rem)}</div>` : ""}</div><div><button class="ghost sm" data-rcfix="${esc(x.id)}">${d ? "Not fixed" : "Fixed"}</button></div></div>`; }).join("")
     : `<p class="muted">${r.at ? "No recalls found for this model year." : recallQ(v) ? "Not checked yet." : "Add the model year to check recalls."}</p>`)
-    + (r.at ? `<p class="muted">Checked ${new Date(r.at).toLocaleDateString()}</p>` : ""); }
+    + `<p class="muted">May be incomplete or out of date. Check your VIN at NHTSA.gov/recalls.</p>` + (r.at ? `<p class="muted">Checked ${new Date(r.at).toLocaleDateString()}</p>` : ""); }
 
 // ---------- renewals ----------
 const REN = { reg: "Registration", ins: "Insurance", insp: "Inspection", warr: "Warranty" }, RENEVERY = { reg: 12, ins: 6, insp: 12, warr: 0 };

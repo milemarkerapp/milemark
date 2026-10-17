@@ -51,7 +51,7 @@
 <dialog id="repDlg"><h3>Replaced a part</h3>
 <label>What was replaced<select id="repItem"></select></label>
 <div id="repNew" class="hidden"><label>Name<input id="repName" placeholder="e.g. Alternator"></label>
-<div class="grid2"><label>Replace every … miles<input id="repMi2" type="number" min="0" inputmode="numeric"></label><label>and/or … months<input id="repMo" type="number" min="0" inputmode="numeric"></label></div></div>
+<div class="grid2"><label>Replace every … miles<input id="repMi2" type="number" min="0" inputmode="numeric"></label><label>and/or … months<input id="repMo" type="number" min="0" inputmode="numeric"></label></div><div id="repTireNote" class="muted hidden">MileMark default, not from your manual</div></div>
 <div class="grid2"><label>Odometer<input id="repMi" type="number" inputmode="numeric"><button type="button" class="ghost sm scanbtn" data-scan="repMi" data-keep="1">Scan odometer</button></label><label>Date<input id="repDate" type="date"></label></div>
 <label>Parts<input id="repParts" placeholder="brand / part number"></label>
 <div class="grid2"><label>Cost<input id="repCost" type="number" step="0.01" inputmode="decimal" placeholder="$"></label><label>Done by<input id="repWho" list="whoList" placeholder="DIY or shop name"></label></div>
@@ -71,7 +71,7 @@
 <dialog id="tireDlg"><h3>Tire sets</h3><div id="tireList"></div>
 <h4 style="margin:12px 0 0">Add a set</h4>
 <label>Name<input id="tsName" placeholder="Summer"></label>
-<div class="grid2"><label>Replace every … miles<input id="tsMi" type="number" min="0" inputmode="numeric" value="50000"></label><label>and/or … months<input id="tsMo" type="number" min="0" inputmode="numeric" value="72"></label></div>
+<div class="grid2"><label>Replace every … miles<input id="tsMi" type="number" min="0" inputmode="numeric" value="50000"></label><label>and/or … months<input id="tsMo" type="number" min="0" inputmode="numeric" value="72"></label></div><div class="muted">MileMark default, not from your manual</div>
 <label class="chk"><input type="checkbox" id="tsMount"> On the car now</label><div id="tsMsg" class="muted"></div>
 <div class="row"><button id="tsAdd">Add set</button><button id="tsClose" class="ghost">Close</button></div></dialog>
 <dialog id="ivDlg"><h3 id="ivTitle"></h3><p class="muted" id="ivFactory"></p>
@@ -83,13 +83,13 @@
 <div id="lock" class="hidden" role="dialog" aria-label="Unlock MileMark"><div class="lkbox"><img src="icon-192.png" alt="MileMark" width="96" height="96"><h1>Mile<span>Mark</span></h1><p class="lkprice">$9 one-time</p>
 <a id="buyLink" class="btn" target="_blank" rel="noopener">Buy</a><label>License key<input id="licKey" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" autocomplete="off" autocapitalize="off"></label><div id="licMsg" class="muted" aria-live="polite"></div><button id="licGo">Activate</button>
 <div class="row lkrow"><button id="lkBackup" class="ghost sm">Back up</button><label class="filebtn ghost sm">Restore backup<input id="lkRestore" type="file" accept=".json,application/json" hidden></label></div></div></div>
-<footer><a href="help.html">Help</a> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · Support and refunds through Gumroad · © MileMark</footer>
+<footer><a href="help.html">Help</a> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · Support and refunds through Gumroad · © MileMark<br><small>MileMark is independent and not affiliated with or endorsed by any vehicle maker. Brand names are used only to identify vehicles and belong to their owners.</small></footer>
 <dialog id="odoDlg"><h3>Update odometer</h3>
 <label>Odometer<input id="odoVal" type="number" min="0" inputmode="numeric"><button type="button" class="ghost sm scanbtn" data-scan="odoVal" data-keep="0">Scan odometer</button></label>
 <div class="row"><button id="odoSave">Save</button><button id="odoCancel" class="ghost">Cancel</button></div></dialog>
 <dialog id="scanDlg"><img id="scanImg" alt="Your odometer photo"><h3 id="scanQ">Reading…</h3>
 <label>Odometer (mi)<input id="scanVal" type="number" min="0" inputmode="numeric"></label><p class="muted" id="scanNote" hidden></p>
-<label class="chk"><input type="checkbox" id="scanKeep"> Keep photo as proof of mileage</label>
+<label class="chk"><input type="checkbox" id="scanKeep"> Keep photo with this reading</label>
 <div class="row"><button id="scanUse">Use this</button><button id="scanRetake" class="ghost">Retake</button><button id="scanCancel" class="ghost">Cancel</button></div></dialog>
 <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
 <script src="notify-core.js"></script><script src="features.js"></script><script src="app.js"></script><script src="replace.js"></script><script src="more.js"></script><script src="scan.js"></script></body></html>
