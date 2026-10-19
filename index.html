@@ -22,6 +22,8 @@
 <label>Current odometer<input id="fCur" type="number" min="0" inputmode="numeric" placeholder="48200"><button type="button" class="ghost sm scanbtn" data-scan="fCur" data-keep="0">Scan odometer</button></label></div>
 <details><summary class="muted">Optional settings</summary>
 <label>Nickname<input id="fName" placeholder="Blue truck"></label>
+<div class="grid2"><label>Unit number<input id="fUnit" maxlength="20" placeholder="12"></label><label>Plate<input id="fPlate" maxlength="12" autocapitalize="characters"></label></div>
+<label>Tire size<input id="fTire" maxlength="20" placeholder="265/70R17"></label>
 <label>Average miles per day<input id="fRate" type="number" step="1" placeholder="37 (about 13,500 a year)"></label>
 <label id="fEngWrap" class="hidden">Engine / drivetrain (optional)<select id="fEng"></select></label><label>Driving conditions<select id="fDuty"><option value="n">Normal</option><option value="s">Severe (towing, short trips, dust, extreme heat or cold, stop-and-go)</option></select></label></details>
 <div class="row"><button id="saveVeh">Start reminders</button><button id="cancelVeh" class="ghost">Cancel</button></div></section>
@@ -36,7 +38,7 @@
 <div class="card"><h2>Timeline</h2><p class="muted">From your starting mileage to 30,000 miles past today.</p><div id="timeline"></div></div>
 <div class="card" id="compCard"><div class="row between"><h2>Completed</h2><div class="row"><select id="compFilter" class="sm inl" aria-label="Filter"></select><button id="compRep" class="sm">Replaced a part</button></div></div><div id="compSum" class="muted"></div><div id="completed"></div></div>
 <div class="card"><div class="row between"><h2>Service log</h2><button id="pastBtn" class="ghost sm">+ Past service</button></div><div id="log"></div></div>
-<div class="card row wrap"><button id="reportBtn">Vehicle History Report</button><button id="printBtn" class="ghost">Print</button><button id="csvBtn" class="ghost">Export CSV</button><button id="jsonBtn" class="ghost">Back up</button><label class="filebtn ghost">Restore backup<input id="restore" type="file" accept=".json,application/json" hidden></label><a class="btn ghost" href="help.html">Help</a></div>
+<div class="card row wrap"><button id="reportBtn">Vehicle History Report</button><button id="printBtn" class="ghost">Print</button><button id="csvBtn" class="ghost">Export CSV</button><button id="sheetBtn" class="ghost">Record sheet</button><button id="fleetBtn" class="ghost">Fleet CSV</button><button id="jsonBtn" class="ghost">Back up</button><label class="filebtn ghost">Restore backup<input id="restore" type="file" accept=".json,application/json" hidden></label><a class="btn ghost" href="help.html">Help</a></div>
 </section>
 <p class="disclaimer">Intervals come from the manufacturer's official owner's manual or maintenance guide for your model year, with the manual and page cited. Pick your engine for exact values. <b>Your owner's manual and your vehicle's maintenance reminder are the authority.</b></p>
 </main>
@@ -90,6 +92,6 @@
 <dialog id="scanDlg"><img id="scanImg" alt="Your odometer photo"><h3 id="scanQ">Reading…</h3>
 <label>Odometer (mi)<input id="scanVal" type="number" min="0" inputmode="numeric"></label><p class="muted" id="scanNote" hidden></p>
 <label class="chk"><input type="checkbox" id="scanKeep"> Keep photo with this reading</label>
-<div class="row"><button id="scanUse">Use this</button><button id="scanRetake" class="ghost">Retake</button><button id="scanCancel" class="ghost">Cancel</button></div></dialog>
+<div class="row wrap"><button id="scanUse">Use this</button><button id="scanShare" class="ghost" hidden>Share photo</button><button id="scanRetake" class="ghost">Retake</button><button id="scanCancel" class="ghost">Cancel</button></div></dialog>
 <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
-<script src="notify-core.js"></script><script src="features.js"></script><script src="app.js"></script><script src="replace.js"></script><script src="more.js"></script><script src="scan.js"></script></body></html>
+<script src="notify-core.js"></script><script src="features.js"></script><script src="app.js"></script><script src="replace.js"></script><script src="more.js"></script><script src="fleet.js"></script><script src="scan.js"></script></body></html>

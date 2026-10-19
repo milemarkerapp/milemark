@@ -76,7 +76,7 @@ function showForm(edit) {
   $("#formCard").classList.remove("hidden"); $("#dash").classList.add("hidden");
   const v = edit && veh(); $("#formTitle").textContent = v ? "Edit vehicle" : "Set up your vehicle";
   $("#fModel").value = v ? v.make + "|" + v.model : ""; $("#fYear").value = v?.year || ""; $("#fCur").value = v ? est(v) : "";
-  $("#fName").value = v?.name || ""; $("#fRate").value = v ? Math.round(v.rate) : ""; $("#fDuty").value = v?.duty || "n"; fillEng(v?.engine || "");
+  $("#fName").value = v?.name || ""; $("#fUnit").value = v?.unit || ""; $("#fPlate").value = v?.plate || ""; $("#fTire").value = v?.tireSize || ""; $("#fRate").value = v ? Math.round(v.rate) : ""; $("#fDuty").value = v?.duty || "n"; fillEng(v?.engine || "");
   $("#saveVeh").dataset.edit = v ? v.id : ""; clearProof();
 }
 function saveVeh() {
@@ -84,9 +84,9 @@ function saveVeh() {
   if (!make) return alert("Pick a make and model.");
   if (!$("#fCur").value || cur < 0) return alert("Enter your current odometer.");
   const id = $("#saveVeh").dataset.edit, rate = +$("#fRate").value || 0, pb = takeProof("fCur"), now = Date.now();
-  if (id) { const v = veh(); Object.assign(v, { make, model, year: $("#fYear").value, name: $("#fName").value, duty: $("#fDuty").value, engine: $("#fEng").value }); if (rate) v.rate = rate; if (cur !== est(v)) { if (!lowerOk(v, cur)) return; correct(v, cur, pb); } }
+  if (id) { const v = veh(); Object.assign(v, { make, model, year: $("#fYear").value, name: $("#fName").value, unit: $("#fUnit").value.trim(), plate: $("#fPlate").value.trim(), tireSize: $("#fTire").value.trim(), duty: $("#fDuty").value, engine: $("#fEng").value }); if (rate) v.rate = rate; if (cur !== est(v)) { if (!lowerOk(v, cur)) return; correct(v, cur, pb); } }
   else {
-    const v = { id: Date.now().toString(36), make, model, year: $("#fYear").value, name: $("#fName").value, duty: $("#fDuty").value, engine: $("#fEng").value, rate: rate || DEFAULT_RATE, rateSet: !!rate,
+    const v = { id: Date.now().toString(36), make, model, year: $("#fYear").value, name: $("#fName").value, unit: $("#fUnit").value.trim(), plate: $("#fPlate").value.trim(), tireSize: $("#fTire").value.trim(), duty: $("#fDuty").value, engine: $("#fEng").value, rate: rate || DEFAULT_RATE, rateSet: !!rate,
       startOdo: cur, startAt: now, anchorOdo: cur, anchorAt: now, readings: [{ odo: cur, at: now }], log: [] };
     if (pb) { v.readings[0].photo = true; savePhoto("o" + now, pb); }
     st.vehicles.push(v); st.cur = v.id;
@@ -101,12 +101,12 @@ function correct(v, odo, proof) { // refine the miles/day rate from real reading
 }
 function render() {
   lockUI();
-  $("#vehList").innerHTML = st.vehicles.length ? st.vehicles.map(v => `<div class="veh ${v.id === st.cur ? "on" : ""}" data-id="${v.id}"><div><b>${esc(v.name || `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim())}</b><div class="muted">~${fmt(est(v))} mi${vBadge(v)}</div></div><div class="row"><button class="mv" data-up="${v.id}" title="Move up" aria-label="Move up">↑</button><button class="mv" data-down="${v.id}" title="Move down" aria-label="Move down">↓</button><button class="x" data-del="${v.id}" title="Remove">✕</button></div></div>`).join("") : '<p class="muted">No vehicle yet. Tap + Add to start.</p>';
+  $("#vehList").innerHTML = st.vehicles.length ? st.vehicles.map(v => `<div class="veh ${v.id === st.cur ? "on" : ""}" data-id="${v.id}"><div><b>${v.unit ? esc(v.unit) + " · " : ""}${esc(v.name || `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim())}</b><div class="muted">~${fmt(est(v))} mi${vBadge(v)}</div></div><div class="row"><button class="mv" data-up="${v.id}" title="Move up" aria-label="Move up">↑</button><button class="mv" data-down="${v.id}" title="Move down" aria-label="Move down">↓</button><button class="x" data-del="${v.id}" title="Remove">✕</button></div></div>`).join("") : '<p class="muted">No vehicle yet. Tap + Add to start.</p>';
   const v = veh(); if (!v) { $("#dash").classList.add("hidden"); if (!st.vehicles.length) showForm(); return; }
   $("#dash").classList.remove("hidden");
   const S = allStatus(v), e = est(v);
   $("#vTitle").textContent = v.name || `${v.year || ""} ${v.make === "Generic" ? "" : v.make} ${v.model}`.trim();
-  $("#vSys").textContent = schedule(v).system; $("#vBadge").innerHTML = vBadge(v); $("#duty").value = v.duty;
+  $("#vSys").textContent = [v.unit && "Unit " + v.unit, v.plate, v.tireSize && "Tires " + v.tireSize, schedule(v).system].filter(Boolean).join(" · "); $("#vBadge").innerHTML = vBadge(v); $("#duty").value = v.duty;
   $("#estOdo").textContent = fmt(e) + " mi"; $("#estInfo").textContent = ` · ~${Math.round(v.rate)} mi/day${v.readings.length > 1 ? " (learned)" : " (default)"}`;
   const c = k => S.filter(x => x.s === k).length; $("#cOver").textContent = c("over"); $("#cNow").textContent = c("now"); $("#cNext").textContent = Math.min(3, c("next"));
   const lbl = { over: "Overdue", now: "Due now", next: "Upcoming" };
@@ -219,8 +219,8 @@ async function shareReport() {
   const v = veh(), c = compliance(v), text = `${v.year || ""} ${v.make} ${v.model}: ${v.log.length} services logged, ${c.ok} of ${c.due} factory services done on time. Odometer ~${fmt(est(v))} mi.`;
   const html = `<!doctype html><meta charset="utf-8"><title>Vehicle History Report</title><style>body{font:14px system-ui;max-width:760px;margin:20px auto}table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #ddd;padding:5px;text-align:left}.kpi div{display:inline-block;margin-right:20px}.lock,.rthumb{display:none}</style>${$("#rBody").innerHTML}`;
   const file = new File([html], "vehicle-history-report.html", { type: "text/html" });
-  try { if (navigator.canShare?.({ files: [file] })) return await navigator.share({ title: "Vehicle History Report", text, files: [file] });
-    if (navigator.share) return await navigator.share({ title: "Vehicle History Report", text }); } catch (e) { if (e.name === "AbortError") return; }
+  try { if (navigator.canShare?.({ files: [file] })) return await navigator.share({ title: $("#rBody h1").textContent, text, files: [file] });
+    if (navigator.share) return await navigator.share({ title: $("#rBody h1").textContent, text }); } catch (e) { if (e.name === "AbortError") return; }
   dl("vehicle-history-report.html", html, "text/html"); alert("Saved the report as a file. For a PDF, use Print / Save PDF.");
 }
 

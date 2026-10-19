@@ -283,6 +283,7 @@
     dlg.addEventListener("cancel", () => { run++; });
     $q("#scanFile").addEventListener("change", async e => {
       const f = e.target.files[0]; if (!f || !ctx) return; const mine = ++run;
+      $q("#scanShare").hidden = !veh() || (ctx.field === "fCur" && !$q("#saveVeh").dataset.edit);
       if (thumb) URL.revokeObjectURL(thumb); thumb = URL.createObjectURL(f); $q("#scanImg").src = thumb;
       $q("#scanVal").value = ""; $q("#scanKeep").checked = ctx.keep; note(""); $q("#scanQ").innerHTML = '<span class="scanspin"></span>Reading…'; dlg.setAttribute("data-busy", ""); sync();
       if (!dlg.open) dlg.showModal();
